@@ -470,7 +470,7 @@ public class TestThreadPoolRequestReplicator {
                     try {
                         Thread.sleep(delayMillis);
                     } catch (InterruptedException e) {
-                        Assert.fail("Thread Interrupted durating test");
+                        Assert.fail("Thread Interrupted during test");
                     }
                 }
 
