@@ -81,6 +81,7 @@
     left: 20px;
     right: 20px;
     overflow-y: auto;
+    word-wrap: break-word;
 }
 
 .dialog-buttons {
