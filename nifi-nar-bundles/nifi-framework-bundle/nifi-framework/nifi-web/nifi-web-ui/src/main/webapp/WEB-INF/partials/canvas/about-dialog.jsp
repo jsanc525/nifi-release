@@ -18,7 +18,7 @@
 <div id="nf-about">
     <div id="nf-about-pic-container">
         <img src="images/hdf-icon.svg" style="position: absolute; top: 65px; left: 20px; width: 48px; z-index: 1;">
-        <p style="position: absolute; top: 85px; left: 77px; z-index: 1; color: #fff; font-size: 13px; ">Version 2.0</p>
+        <p style="position: absolute; top: 85px; left: 77px; z-index: 1; color: #fff; font-size: 13px; ">Version 2.0.1</p>
         <div id="nf-about-pic"></div>
     </div>
     <div class="dialog-content">
