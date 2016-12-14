@@ -2265,7 +2265,7 @@ nf.SummaryTable = (function () {
      */
     var addGarbageCollection = function (container, garbageCollection) {
         var nameTr = $('<tr></tr>').appendTo(container);
-        $('<td class="setting-name"></td>').append(garbageCollection.name + ':').appendTo(nameTr);
+        $('<td class="setting-name"></td>').text(garbageCollection.name + ':').appendTo(nameTr);
         var valTr = $('<tr></tr>').appendTo(container);
         $('<td></td>').append($('<b></b>').text(garbageCollection.collectionCount + ' times (' + garbageCollection.collectionTime + ')')).appendTo(valTr);
         $('<tr></tr>').text(' ').appendTo(container);
