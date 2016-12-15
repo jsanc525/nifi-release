@@ -375,6 +375,7 @@ public class PutElasticsearchHttp extends AbstractElasticsearchHttpProcessor {
                 logger.warn("Elasticsearch returned code {} with message {}, transferring flow file to failure", new Object[]{statusCode, getResponse.message()});
                 session.transfer(flowFilesToTransfer, REL_FAILURE);
             }
+            getResponse.close();
         }
     }
 }
