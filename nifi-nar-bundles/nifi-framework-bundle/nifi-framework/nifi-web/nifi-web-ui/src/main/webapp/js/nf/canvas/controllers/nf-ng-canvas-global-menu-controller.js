@@ -316,20 +316,23 @@
                         var aboutDetails = response.about;
                         // set the document title and the about title
                         document.title = aboutDetails.title;
-                        $('#nf-version').text(aboutDetails.version);
+                        $('#nf-version').text('Powered by Apache NiFi - Version ' + aboutDetails.version).attr('title', 'Powered by Apache NiFi - Version ' + aboutDetails.version);
                         var showVersionDetail = false;
                         if (aboutDetails.buildTag && aboutDetails.buildTag !== 'HEAD') {
+                            $('#nf-version-detail-tag').attr('title', 'Tagged ' + aboutDetails.buildTag);
                             $('#nf-about-build-tag').text(aboutDetails.buildTag);
                             $('#nf-version-detail-tag').show();
                             showVersionDetail = true;
                         }
                         if (aboutDetails.buildRevision) {
+                            $('#nf-version-detail-commit').attr('title', 'From ' + aboutDetails.buildRevision + ' on branch ' + aboutDetails.buildBranch);
                             $('#nf-about-build-revision').text(aboutDetails.buildRevision);
                             $('#nf-about-build-branch').text(aboutDetails.buildBranch);
                             $('#nf-version-detail-commit').show();
                             showVersionDetail = true
                         }
                         if (aboutDetails.buildTimestamp) {
+                            $('#nf-version-detail-timestamp').attr('title', aboutDetails.buildTimestamp);
                             $('#nf-about-build-timestamp').text(aboutDetails.buildTimestamp);
                             $('#nf-version-detail-timestamp').show();
                             showVersionDetail = true;
@@ -366,30 +369,37 @@
                      * Initialize the modal.
                      */
                     init: function () {
-                        var aboutModal = this;
+                        var self = this;
 
                         var resizeAbout = function () {
                             var dialog = $(this);
-                            var top = $('#nf-about-pic-container').height() + $('.dialog-header').height() + 10; //10 for padding-top
+                            var top = $('#nf-about-pic-container').height() + $('.dialog-header').height() + 20; //10 for padding-top
                             dialog.find('.dialog-content').css('top', top);
+                        };
+
+                        var openAbout = function () {
+                            var dialog = $(this);
+                            nf.Common.toggleScrollable(dialog.find('.dialog-content').get(0));
                         };
 
                         this.getElement().modal({
                             scrollableContentStyle: 'scrollable',
-                            headerText: 'About Apache NiFi',
+                            headerText: 'About Hortonworks DataFlow (HDF)',
                             handler: {
-                                resize: resizeAbout
+                                resize: resizeAbout,
+                                open: openAbout
                             },
+                            glasspane: "#fff",
                             buttons: [{
                                 buttonText: 'Ok',
                                 color: {
-                                    base: '#728E9B',
-                                    hover: '#004849',
+                                    base: '#3fae2a',
+                                    hover: '#3b8740',
                                     text: '#ffffff'
                                 },
                                 handler: {
                                     click: function () {
-                                        aboutModal.hide();
+                                        self.hide();
                                     }
                                 }
                             }]
