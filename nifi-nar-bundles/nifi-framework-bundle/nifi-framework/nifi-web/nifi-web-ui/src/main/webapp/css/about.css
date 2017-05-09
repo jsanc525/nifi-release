@@ -17,13 +17,17 @@
 #nf-about {
     overflow: hidden;
     width: 500px;
-    height: 500px;
-    max-height: 450px;
+    height: 543px;
+    max-height: 543px;
+}
+
+#nf-about .dialog-header {
+    background-color: #3fae2a;
 }
 
 #nf-about-pic {
     height: 60%;
-    background: url(../images/nifi-logo-about.svg) #000000 no-repeat center center;
+    background: url(../images/hwx-logo.svg) #000000 no-repeat center center;
     top: 20%;
     position: relative;
 }
@@ -37,13 +41,17 @@
     font-weight:500;
     font-size: 13px;
     cursor: pointer;
+    padding: 0px;
 }
 
 #nf-about-content p {
-    padding-top: 9px;
+    padding-top: 15px;
     padding-bottom: 9px;
     font-size: 15px;
     line-height: 15px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 #nf-about-content span.link {
@@ -52,8 +60,44 @@
     font-weight:900;
 }
 
+#nf-about-description {
+    margin-left: 68px;
+    white-space: normal !important;
+}
+
+#nf-about-description-container {
+    position: relative;
+}
+
+#nf-about-nifi-drop {
+    position: absolute;
+    top: 15px;
+    left: 0px;
+    width: 48px;
+}
+
+#nf-about-hdf-icon {
+    position: absolute;
+    top: 65px;
+    left: 20px;
+    width: 48px;
+    z-index: 1;
+}
+
+#nf-about-hdf-version-number {
+    position: absolute;
+    top: 85px;
+    left: 77px;
+    z-index: 1;
+    color: #fff;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    right: 5px;
+}
+
 #nf-version-detail {
-    padding: 5px 0 0 5px;
     display: none;
 }
 
