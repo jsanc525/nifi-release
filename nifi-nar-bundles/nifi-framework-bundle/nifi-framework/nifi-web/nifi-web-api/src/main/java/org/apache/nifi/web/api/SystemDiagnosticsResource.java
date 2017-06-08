@@ -164,7 +164,7 @@ public class SystemDiagnosticsResource extends ApplicationResource {
         entity.setSystemDiagnostics(systemDiagnosticsDto);
 
         // generate the response
-        return clusterContext(generateOkResponse(entity)).build();
+        return generateOkResponse(entity).build();
     }
 
     // setters

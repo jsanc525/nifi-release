@@ -167,7 +167,7 @@ public class ProvenanceResource extends ApplicationResource {
         entity.setProvenanceOptions(searchOptions);
 
         // generate the response
-        return clusterContext(noCache(Response.ok(entity))).build();
+        return noCache(Response.ok(entity)).build();
     }
 
     /**
@@ -265,7 +265,7 @@ public class ProvenanceResource extends ApplicationResource {
                     entity.setProvenance(dto);
 
                     // generate the response
-                    return clusterContext(generateCreatedResponse(URI.create(dto.getUri()), entity)).build();
+                    return generateCreatedResponse(URI.create(dto.getUri()), entity).build();
                 }
         );
     }
@@ -344,7 +344,7 @@ public class ProvenanceResource extends ApplicationResource {
         entity.setProvenance(dto);
 
         // generate the response
-        return clusterContext(generateOkResponse(entity)).build();
+        return generateOkResponse(entity).build();
     }
 
     /**
@@ -412,7 +412,7 @@ public class ProvenanceResource extends ApplicationResource {
                     serviceFacade.deleteProvenance(entity.getId());
 
                     // generate the response
-                    return clusterContext(generateOkResponse(new ProvenanceEntity())).build();
+                    return generateOkResponse(new ProvenanceEntity()).build();
                 }
         );
     }
@@ -520,7 +520,7 @@ public class ProvenanceResource extends ApplicationResource {
                     entity.setLineage(dto);
 
                     // generate the response
-                    return clusterContext(generateCreatedResponse(URI.create(dto.getUri()), entity)).build();
+                    return generateCreatedResponse(URI.create(dto.getUri()), entity).build();
                 }
         );
     }
@@ -581,7 +581,7 @@ public class ProvenanceResource extends ApplicationResource {
         entity.setLineage(dto);
 
         // generate the response
-        return clusterContext(generateOkResponse(entity)).build();
+        return generateOkResponse(entity).build();
     }
 
     /**
@@ -643,7 +643,7 @@ public class ProvenanceResource extends ApplicationResource {
                     serviceFacade.deleteLineage(entity.getId());
 
                     // generate the response
-                    return clusterContext(generateOkResponse(new LineageEntity())).build();
+                    return generateOkResponse(new LineageEntity()).build();
                 }
         );
     }
