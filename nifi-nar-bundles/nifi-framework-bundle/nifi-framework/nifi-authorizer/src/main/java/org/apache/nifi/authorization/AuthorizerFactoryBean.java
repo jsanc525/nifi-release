@@ -26,6 +26,7 @@ import org.apache.nifi.authorization.generated.Property;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.NarCloseable;
+import org.apache.nifi.security.xml.XmlUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
@@ -134,9 +136,10 @@ public class AuthorizerFactoryBean implements FactoryBean, DisposableBean, Autho
                 final Schema schema = schemaFactory.newSchema(Authorizers.class.getResource(AUTHORIZERS_XSD));
 
                 // attempt to unmarshal
+                final XMLStreamReader xsr = XmlUtils.createSafeReader(new StreamSource(authorizersConfigurationFile));
                 final Unmarshaller unmarshaller = JAXB_CONTEXT.createUnmarshaller();
                 unmarshaller.setSchema(schema);
-                final JAXBElement<Authorizers> element = unmarshaller.unmarshal(new StreamSource(authorizersConfigurationFile), Authorizers.class);
+                final JAXBElement<Authorizers> element = unmarshaller.unmarshal(xsr, Authorizers.class);
                 return element.getValue();
             } catch (SAXException | JAXBException e) {
                 throw new Exception("Unable to load the authorizer configuration file at: " + authorizersConfigurationFile.getAbsolutePath(), e);
