@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.serialization.MalformedRecordException;
 import org.apache.nifi.serialization.SimpleRecordSchema;
@@ -55,6 +56,11 @@ public class TestCSVRecordReader {
             fields.add(new RecordField(fieldName, RecordFieldType.STRING.getDataType()));
         }
         return fields;
+    }
+
+    private CSVRecordReader createReader(final InputStream in, final RecordSchema schema, CSVFormat format) throws IOException {
+        return new CSVRecordReader(in, Mockito.mock(ComponentLog.class), schema, format,
+            RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat());
     }
 
     @Test
@@ -87,9 +93,8 @@ public class TestCSVRecordReader {
 
         final RecordSchema schema = new SimpleRecordSchema(fields);
 
-        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/single-bank-account.csv"))) {
-            final CSVRecordReader reader = new CSVRecordReader(fis, Mockito.mock(ComponentLog.class), schema, format,
-                RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat());
+        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/single-bank-account.csv"));
+            final CSVRecordReader reader = createReader(fis, schema, format)) {
 
             final Object[] record = reader.nextRecord().getValues();
             final Object[] expectedValues = new Object[] {"1", "John Doe", 4750.89D, "123 My Street", "My City", "MS", "11111", "USA"};
@@ -106,9 +111,8 @@ public class TestCSVRecordReader {
 
         final RecordSchema schema = new SimpleRecordSchema(fields);
 
-        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/multi-bank-account.csv"))) {
-            final CSVRecordReader reader = new CSVRecordReader(fis, Mockito.mock(ComponentLog.class), schema, format,
-                RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat());
+        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/multi-bank-account.csv"));
+            final CSVRecordReader reader = createReader(fis, schema, format)) {
 
             final Object[] firstRecord = reader.nextRecord().getValues();
             final Object[] firstExpectedValues = new Object[] {"1", "John Doe", 4750.89D, "123 My Street", "My City", "MS", "11111", "USA"};
@@ -129,9 +133,8 @@ public class TestCSVRecordReader {
 
         final RecordSchema schema = new SimpleRecordSchema(fields);
 
-        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/extra-white-space.csv"))) {
-            final CSVRecordReader reader = new CSVRecordReader(fis, Mockito.mock(ComponentLog.class), schema, format,
-                RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat());
+        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/extra-white-space.csv"));
+            final CSVRecordReader reader = createReader(fis, schema, format)) {
 
             final Object[] firstRecord = reader.nextRecord().getValues();
             final Object[] firstExpectedValues = new Object[] {"1", "John Doe", 4750.89D, "123 My Street", "My City", "MS", "11111", "USA"};
@@ -157,9 +160,8 @@ public class TestCSVRecordReader {
         final String csvData = headerLine + "\n" + inputRecord;
         final byte[] inputData = csvData.getBytes();
 
-        try (final InputStream baos = new ByteArrayInputStream(inputData)) {
-            final CSVRecordReader reader = new CSVRecordReader(baos, Mockito.mock(ComponentLog.class), schema, format,
-                RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat());
+        try (final InputStream bais = new ByteArrayInputStream(inputData);
+            final CSVRecordReader reader = createReader(bais, schema, format)) {
 
             final Record record = reader.nextRecord();
             assertNotNull(record);
@@ -172,6 +174,32 @@ public class TestCSVRecordReader {
             assertEquals("MS", record.getValue("state"));
             assertEquals("11111", record.getValue("zipCode"));
             assertNull(record.getValue("country"));
+
+            assertNull(reader.nextRecord());
+        }
+    }
+
+    @Test
+    public void testMultipleRecordsEscapedWithSpecialChar() throws IOException, MalformedRecordException {
+
+        char delimiter = StringEscapeUtils.unescapeJava("\u0001").charAt(0);
+
+        final CSVFormat format = CSVFormat.DEFAULT.withFirstRecordAsHeader().withTrim().withQuote('"').withDelimiter(delimiter);
+        final List<RecordField> fields = getDefaultFields();
+        fields.replaceAll(f -> f.getFieldName().equals("balance") ? new RecordField("balance", doubleDataType) : f);
+
+        final RecordSchema schema = new SimpleRecordSchema(fields);
+
+        try (final InputStream fis = new FileInputStream(new File("src/test/resources/csv/multi-bank-account_escapedchar.csv"));
+            final CSVRecordReader reader = createReader(fis, schema, format)) {
+
+            final Object[] firstRecord = reader.nextRecord().getValues();
+            final Object[] firstExpectedValues = new Object[] {"1", "John Doe", 4750.89D, "123 My Street", "My City", "MS", "11111", "USA"};
+            Assert.assertArrayEquals(firstExpectedValues, firstRecord);
+
+            final Object[] secondRecord = reader.nextRecord().getValues();
+            final Object[] secondExpectedValues = new Object[] {"2", "Jane Doe", 4820.09D, "321 Your Street", "Your City", "NY", "33333", "USA"};
+            Assert.assertArrayEquals(secondExpectedValues, secondRecord);
 
             assertNull(reader.nextRecord());
         }
