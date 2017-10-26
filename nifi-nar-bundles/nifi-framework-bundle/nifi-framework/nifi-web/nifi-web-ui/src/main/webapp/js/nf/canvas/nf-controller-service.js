@@ -622,6 +622,8 @@
         createReferenceBlock('Unauthorized', unauthorized);
     };
 
+    var MAX_URL_LENGTH = 2000;  // the maximum (suggested) safe string length of a URL supported by all browsers and application servers
+
     /**
      * Queries for bulletins for the specified components.
      *
@@ -629,16 +631,89 @@
      * @returns {deferred}
      */
     var queryBulletins = function (componentIds) {
-        var ids = componentIds.join('|');
+        var queries = [];
 
-        return $.ajax({
-            type: 'GET',
-            url: '../nifi-api/flow/bulletin-board',
-            data: {
-                sourceId: ids
-            },
-            dataType: 'json'
-        }).fail(nfErrorHandler.handleAjaxError);
+        var query = function (ids) {
+            var url = new URL(window.location);
+            var endpoint = url.origin + '/nifi-api/flow/bulletin-board?' + $.param({
+                sourceId: ids.join('|')
+            });
+
+            if (endpoint.length > MAX_URL_LENGTH) {
+                // split into two arrays and recurse with both halves
+                var mid = Math.ceil(ids.length / 2);
+
+                // left half
+                var left = ids.slice(0, mid);
+                if (left.length > 0) {
+                    query(left);
+                }
+
+                // right half
+                var right = ids.slice(mid);
+                if (right.length > 0) {
+                    query(right);
+                }
+            } else {
+                queries.push($.ajax({
+                    type: 'GET',
+                    url: endpoint,
+                    dataType: 'json'
+                }));
+            }
+        };
+
+        // initiate the queries
+        query(componentIds);
+
+        if (queries.length === 1) {
+            // if there was only one query, return it
+            return $.Deferred(function (deferred) {
+                queries[0].done(function (response) {
+                    deferred.resolve(response);
+                }).fail(function () {
+                    deferred.reject();
+                }).fail(nfErrorHandler.handleAjaxError);
+            }).promise();
+        } else {
+            // if there were multiple queries, wait for each to complete
+            return $.Deferred(function (deferred) {
+                $.when.apply(window, queries).done(function () {
+                    var results = $.makeArray(arguments);
+
+                    var generated = null;
+                    var bulletins = [];
+
+                    $.each(results, function (_, result) {
+                        var response = result[0];
+                        var bulletinBoard = response.bulletinBoard;
+
+                        // use the first generated timestamp
+                        if (generated === null) {
+                            generated = bulletinBoard.generated;
+                        }
+
+                        // build up all the bulletins
+                        Array.prototype.push.apply(bulletins, bulletinBoard.bulletins);
+                    });
+
+                    // sort all the bulletins
+                    bulletins.sort(function (a, b) {
+                        return b.id - a.id;
+                    });
+
+                    // resolve with a aggregated result
+                    deferred.resolve({
+                        bulletinBoard: {
+                            generated: generated,
+                            bulletins: bulletins
+                        }
+                    });
+                }).fail(function () {
+                    deferred.reject();
+                }).fail(nfErrorHandler.handleAjaxError);
+            }).promise();
+        }
     };
 
     /**
@@ -883,8 +958,7 @@
                     dataType: 'json'
                 });
 
-                $.when(bulletins, service).done(function (bulletinResult, serviceResult) {
-                    var bulletinResponse = bulletinResult[0];
+                $.when(bulletins, service).done(function (bulletinResponse, serviceResult) {
                     var serviceResponse = serviceResult[0];
                     conditionMet(serviceResponse.component, bulletinResponse.bulletinBoard.bulletins);
                 }).fail(function (xhr, status, error) {
