@@ -326,13 +326,7 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
     public void setup(final ProcessContext context) {
         ComponentLog log = getLogger();
 
-        final String metastoreUri = context.getProperty(METASTORE_URI).evaluateAttributeExpressions().getValue();
-        final String dbName = context.getProperty(DB_NAME).evaluateAttributeExpressions().getValue();
-        final String tableName = context.getProperty(TABLE_NAME).evaluateAttributeExpressions().getValue();
-        final boolean autoCreatePartitions = context.getProperty(AUTOCREATE_PARTITIONS).asBoolean();
-        final Integer maxConnections = context.getProperty(MAX_OPEN_CONNECTIONS).asInteger();
         final Integer heartbeatInterval = context.getProperty(HEARTBEAT_INTERVAL).asInteger();
-        final Integer txnsPerBatch = context.getProperty(TXNS_PER_BATCH).evaluateAttributeExpressions().asInteger();
         final String configFiles = context.getProperty(HIVE_CONFIGURATION_RESOURCES).getValue();
         hiveConfig = hiveConfigurator.getConfigurationFromFiles(configFiles);
 
@@ -343,12 +337,6 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
                 hiveConfig.set(descriptor.getName(), entry.getValue());
             }
         }
-
-        options = new HiveOptions(metastoreUri, dbName, tableName)
-                .withTxnsPerBatch(txnsPerBatch)
-                .withAutoCreatePartitions(autoCreatePartitions)
-                .withMaxOpenConnections(maxConnections)
-                .withHeartBeatInterval(heartbeatInterval);
 
         hiveConfigurator.preload(hiveConfig);
 
@@ -363,7 +351,6 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
                 throw new ProcessException("Kerberos authentication failed for Hive Streaming", ae);
             }
             log.info("Successfully logged in as principal {} with keytab {}", new Object[]{principal, keyTab});
-            options = options.withKerberosPrincipal(principal).withKerberosKeytab(keyTab);
         } else {
             ugi = null;
         }
@@ -375,7 +362,7 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
 
         sendHeartBeat.set(true);
         heartBeatTimer = new Timer();
-        setupHeartBeatTimer();
+        setupHeartBeatTimer(heartbeatInterval);
     }
 
     private static class FunctionContext extends RollbackOnFailure {
@@ -562,7 +549,26 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
         }
 
         final ComponentLog log = getLogger();
+        final String metastoreUri = context.getProperty(METASTORE_URI).evaluateAttributeExpressions(flowFile).getValue();
+        final String dbName = context.getProperty(DB_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        final String tableName = context.getProperty(TABLE_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        final boolean autoCreatePartitions = context.getProperty(AUTOCREATE_PARTITIONS).asBoolean();
+        final Integer maxConnections = context.getProperty(MAX_OPEN_CONNECTIONS).asInteger();
+        final Integer heartbeatInterval = context.getProperty(HEARTBEAT_INTERVAL).asInteger();
+        final Integer txnsPerBatch = context.getProperty(TXNS_PER_BATCH).evaluateAttributeExpressions(flowFile).asInteger();
         final Integer recordsPerTxn = context.getProperty(RECORDS_PER_TXN).evaluateAttributeExpressions(flowFile).asInteger();
+
+        options = new HiveOptions(metastoreUri, dbName, tableName)
+                .withTxnsPerBatch(txnsPerBatch)
+                .withAutoCreatePartitions(autoCreatePartitions)
+                .withMaxOpenConnections(maxConnections)
+                .withHeartBeatInterval(heartbeatInterval);
+
+        if (SecurityUtil.isSecurityEnabled(hiveConfig)) {
+            final String principal = context.getProperty(kerberosProperties.getKerberosPrincipal()).evaluateAttributeExpressions().getValue();
+            final String keyTab = context.getProperty(kerberosProperties.getKerberosKeytab()).evaluateAttributeExpressions().getValue();
+            options = options.withKerberosPrincipal(principal).withKerberosKeytab(keyTab);
+        }
 
         // Store the original class loader, then explicitly set it to this class's classloader (for use by the Hive Metastore)
         ClassLoader originalClassloader = Thread.currentThread().getContextClassLoader();
@@ -799,8 +805,8 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
         hiveConfigurator.stopRenewer();
     }
 
-    private void setupHeartBeatTimer() {
-        if (options.getHeartBeatInterval() > 0) {
+    private void setupHeartBeatTimer(int heartbeatInterval) {
+        if (heartbeatInterval > 0) {
             final ComponentLog log = getLogger();
             heartBeatTimer.schedule(new TimerTask() {
                 @Override
@@ -809,13 +815,13 @@ public class PutHiveStreaming extends AbstractSessionFactoryProcessor {
                         if (sendHeartBeat.get()) {
                             log.debug("Start sending heartbeat on all writers");
                             sendHeartBeatOnAllWriters();
-                            setupHeartBeatTimer();
+                            setupHeartBeatTimer(heartbeatInterval);
                         }
                     } catch (Exception e) {
                         log.warn("Failed to heartbeat on HiveWriter ", e);
                     }
                 }
-            }, options.getHeartBeatInterval() * 1000);
+            }, heartbeatInterval * 1000);
         }
     }
 
