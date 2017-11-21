@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The NiFiProperties class holds all properties which are needed for various
@@ -157,6 +158,7 @@ public abstract class NiFiProperties {
     public static final String WEB_HTTPS_HOST = "nifi.web.https.host";
     public static final String WEB_WORKING_DIR = "nifi.web.jetty.working.directory";
     public static final String WEB_THREADS = "nifi.web.jetty.threads";
+    public static final String WEB_PROXY_CONTEXT_PATH = "nifi.web.proxy.context.path";
 
     // ui properties
     public static final String UI_BANNER_TEXT = "nifi.ui.banner.text";
@@ -1019,6 +1021,43 @@ public abstract class NiFiProperties {
     public int size() {
         return getPropertyKeys().size();
     }
+
+    /**
+     * Returns the whitelisted proxy context paths as a comma-delimited string. The paths have been normalized to the form {@code /some/context/path}.
+     *
+     * Note: Calling {@code NiFiProperties.getProperty(NiFiProperties.WEB_PROXY_CONTEXT_PATH)} will not normalize the paths.
+     *
+     * @return the path(s)
+     */
+    public String getWhitelistedContextPaths() {
+        return StringUtils.join(getWhitelistedContextPathsAsList(), ",");
+    }
+
+    /**
+     * Returns the whitelisted proxy context paths as a list of paths. The paths have been normalized to the form {@code /some/context/path}.
+     *
+     * @return the path(s)
+     */
+    public List<String> getWhitelistedContextPathsAsList() {
+        String rawProperty = getProperty(WEB_PROXY_CONTEXT_PATH, "");
+        List<String> contextPaths = Arrays.asList(rawProperty.split(","));
+        return contextPaths.stream()
+                .map(this::normalizeContextPath).collect(Collectors.toList());
+    }
+
+    private String normalizeContextPath(String cp) {
+        if (cp == null || cp.equalsIgnoreCase("")) {
+            return "";
+        } else {
+            String trimmedCP = cp.trim();
+            // Ensure it starts with a leading slash and does not end in a trailing slash
+            // There's a potential for the path to be something like bad/path/// but this is semi-trusted data from an admin-accessible file and there are way worse possibilities here
+            trimmedCP = trimmedCP.startsWith("/") ? trimmedCP : "/" + trimmedCP;
+            trimmedCP = trimmedCP.endsWith("/") ? trimmedCP.substring(0, trimmedCP.length() - 1) : trimmedCP;
+            return trimmedCP;
+        }
+    }
+
 
     /**
      * Creates an instance of NiFiProperties. This should likely not be called

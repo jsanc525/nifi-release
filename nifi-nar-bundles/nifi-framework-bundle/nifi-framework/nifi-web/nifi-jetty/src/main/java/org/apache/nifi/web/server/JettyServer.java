@@ -46,6 +46,7 @@ import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -142,7 +143,30 @@ public class JettyServer implements NiFiServer {
         configureConnectors(server);
 
         // load wars from the nar working directories
-        loadWars(locateNarWorkingDirectories());
+        Handler warHandlers = loadWars(locateNarWorkingDirectories());
+
+        // Create a handler for the host header and add it to the server
+        String serverName = determineServerHostname();
+        int serverPort = determineServerPort();
+        HostHeaderHandler hostHeaderHandler = new HostHeaderHandler(serverName, serverPort);
+        logger.info("Created HostHeaderHandler [" + hostHeaderHandler.toString() + "]");
+
+        HandlerList allHandlers = new HandlerList();
+        allHandlers.addHandler(hostHeaderHandler);
+        allHandlers.addHandler(warHandlers);
+        server.setHandler(allHandlers);
+    }
+
+    private int determineServerPort() {
+        return props.getSslPort() != null ? props.getSslPort() : props.getPort();
+    }
+
+    private String determineServerHostname() {
+        if (props.getSslPort() != null) {
+            return props.getProperty(NiFiProperties.WEB_HTTPS_HOST, "localhost");
+        } else {
+            return props.getProperty(NiFiProperties.WEB_HTTP_HOST, "localhost");
+        }
     }
 
     private Set<File> locateNarWorkingDirectories() {
@@ -172,7 +196,7 @@ public class JettyServer implements NiFiServer {
      *
      * @param narWorkingDirectories dirs
      */
-    private void loadWars(final Set<File> narWorkingDirectories) {
+    private Handler loadWars(final Set<File> narWorkingDirectories) {
 
         // load WARs
         Map<File, File> warToNarWorkingDirectoryLookup = findWars(narWorkingDirectories);
@@ -324,10 +348,12 @@ public class JettyServer implements NiFiServer {
         handlers.addHandler(documentationHandlers);
 
         // load the web error app
-        handlers.addHandler(loadWar(webErrorWar, "/", frameworkClassLoader));
+        final WebAppContext webErrorContext = loadWar(webErrorWar, "/", frameworkClassLoader);
+                webErrorContext.getInitParams().put("whitelistedContextPaths", props.getWhitelistedContextPaths());
+                handlers.addHandler(webErrorContext);
 
         // deploy the web apps
-        server.setHandler(gzip(handlers));
+        return gzip(handlers);
     }
 
     /**
@@ -561,6 +587,8 @@ public class JettyServer implements NiFiServer {
         httpConfiguration.setRequestHeaderSize(HEADER_BUFFER_SIZE);
         httpConfiguration.setResponseHeaderSize(HEADER_BUFFER_SIZE);
 
+        addHostHeaderSanitizationCustomizer(httpConfiguration);
+
         if (props.getPort() != null) {
             final Integer port = props.getPort();
             if (port < 0 || (int) Math.pow(2, 16) <= port) {
@@ -610,6 +638,18 @@ public class JettyServer implements NiFiServer {
             // add this connector
             server.addConnector(https);
         }
+    }
+
+    private void addHostHeaderSanitizationCustomizer(HttpConfiguration httpConfiguration) {
+        // Add the HostHeaderCustomizer to the configuration
+        HttpConfiguration.Customizer hostHeaderCustomizer;
+        if (props.getSslPort() != null) {
+            hostHeaderCustomizer = new HostHeaderSanitizationCustomizer(props.getProperty(NiFiProperties.WEB_HTTPS_HOST), props.getSslPort());
+        } else {
+            hostHeaderCustomizer = new HostHeaderSanitizationCustomizer(props.getProperty(NiFiProperties.WEB_HTTP_HOST), props.getPort());
+        }
+        httpConfiguration.addCustomizer(hostHeaderCustomizer);
+        logger.info("Added HostHeaderSanitizationCustomizer to HttpConfiguration: " + hostHeaderCustomizer);
     }
 
     private SslContextFactory createSslContextFactory() {

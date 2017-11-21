@@ -58,6 +58,7 @@ import org.apache.nifi.web.api.entity.Entity;
 import org.apache.nifi.web.api.entity.TransactionResultEntity;
 import org.apache.nifi.web.security.ProxiedEntitiesUtils;
 import org.apache.nifi.web.security.util.CacheKey;
+import org.apache.nifi.web.util.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,10 +113,10 @@ public abstract class ApplicationResource {
     public static final String NODEWISE = "false";
 
     @Context
-    private HttpServletRequest httpServletRequest;
+    protected HttpServletRequest httpServletRequest;
 
     @Context
-    private UriInfo uriInfo;
+    protected UriInfo uriInfo;
 
     @Context
     private HttpContext httpContext;
@@ -144,19 +145,10 @@ public abstract class ApplicationResource {
             final String scheme = httpServletRequest.getHeader(PROXY_SCHEME_HTTP_HEADER);
             final String host = httpServletRequest.getHeader(PROXY_HOST_HTTP_HEADER);
             final String port = httpServletRequest.getHeader(PROXY_PORT_HTTP_HEADER);
-            String baseContextPath = httpServletRequest.getHeader(PROXY_CONTEXT_PATH_HTTP_HEADER);
 
-            // if necessary, prepend the context path
-            String resourcePath = uri.getPath();
-            if (baseContextPath != null) {
-                // normalize context path
-                if (!baseContextPath.startsWith("/")) {
-                    baseContextPath = "/" + baseContextPath;
-                }
-
-                // determine the complete resource path
-                resourcePath = baseContextPath + resourcePath;
-            }
+            // Catch header poisoning
+            String whitelistedContextPaths = properties.getWhitelistedContextPaths();
+            String resourcePath = WebUtils.getResourcePath(uri, httpServletRequest, whitelistedContextPaths);
 
             // determine the port uri
             int uriPort = uri.getPort();
