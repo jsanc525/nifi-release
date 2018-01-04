@@ -463,7 +463,7 @@ public class JdbcCommon {
                     break;
 
                 case INTEGER:
-                    if (meta.isSigned(i) || (meta.getPrecision(i) > 0 && meta.getPrecision(i) <= MAX_DIGITS_IN_INT)) {
+                    if (meta.isSigned(i) || (meta.getPrecision(i) > 0 && meta.getPrecision(i) < MAX_DIGITS_IN_INT)) {
                         builder.name(columnName).type().unionOf().nullBuilder().endNull().and().intType().endUnion().noDefault();
                     } else {
                         builder.name(columnName).type().unionOf().nullBuilder().endNull().and().longType().endUnion().noDefault();
