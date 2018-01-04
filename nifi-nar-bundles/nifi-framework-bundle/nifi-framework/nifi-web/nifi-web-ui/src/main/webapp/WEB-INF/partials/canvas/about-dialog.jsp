@@ -18,7 +18,7 @@
 <div id="nf-about">
     <div id="nf-about-pic-container">
         <img id="nf-about-hdf-icon" src="images/hdf-icon.svg">
-        <p id="nf-about-hdf-version-number" title="Version 2.1.0">Version 3.0.0.0</p>
+        <p id="nf-about-hdf-version-number" title="Version 3.0.0.10">Version 3.0.0.10</p>
         <div id="nf-about-pic"></div>
     </div>
     <div class="dialog-content">
