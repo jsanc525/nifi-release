@@ -103,8 +103,8 @@
         <hadoop.http.core.version>4.2.5</hadoop.http.core.version>
         <yammer.metrics.version>2.2.0</yammer.metrics.version>
         <ranger.version>0.7.1</ranger.version>
-        <hive.version>1.2.1000.2.6.0.3-8</hive.version>
-        <hive.hadoop.version>2.7.3.2.6.0.3-8</hive.hadoop.version>
+        <hive.version>1.2.1000.2.6.4.0-91</hive.version>
+        <hive.hadoop.version>2.7.3.2.6.4.0-91</hive.hadoop.version>
         <hbase.version>1.1.2</hbase.version>
         <storm.version>1.1.1</storm.version>
         <hwx.registry.version>0.3.0</hwx.registry.version>
