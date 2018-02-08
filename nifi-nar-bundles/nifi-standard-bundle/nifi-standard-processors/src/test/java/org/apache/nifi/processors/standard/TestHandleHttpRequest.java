@@ -24,6 +24,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
@@ -199,6 +200,11 @@ public class TestHandleHttpRequest {
 
         public void setRegisterSuccessfully(boolean registerSuccessfully) {
             this.registerSuccessfully = registerSuccessfully;
+        }
+
+        @Override
+        public long getRequestTimeout(TimeUnit timeUnit) {
+            return timeUnit.convert(30000, TimeUnit.MILLISECONDS);
         }
     }
 }
