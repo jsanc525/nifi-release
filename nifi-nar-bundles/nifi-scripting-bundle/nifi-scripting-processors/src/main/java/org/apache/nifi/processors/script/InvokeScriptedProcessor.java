@@ -226,6 +226,9 @@ public class InvokeScriptedProcessor extends AbstractSessionFactoryProcessor {
      */
     @Override
     public void onPropertyModified(final PropertyDescriptor descriptor, final String oldValue, final String newValue) {
+
+        validationResults.set(null);
+
         final ComponentLog logger = getLogger();
         final Processor instance = processor.get();
 
@@ -441,6 +444,12 @@ public class InvokeScriptedProcessor extends AbstractSessionFactoryProcessor {
         Collection<ValidationResult> commonValidationResults = super.customValidate(context);
         if (!commonValidationResults.isEmpty()) {
             return commonValidationResults;
+        }
+
+        // do not try to build processor/compile/etc until onPropertyModified clear the validation error/s
+        // and don't print anything into log.
+        if (validationResults.get() != null){
+            return validationResults.get();
         }
 
         scriptingComponentHelper.setScriptEngineName(context.getProperty(scriptingComponentHelper.SCRIPT_ENGINE).getValue());
