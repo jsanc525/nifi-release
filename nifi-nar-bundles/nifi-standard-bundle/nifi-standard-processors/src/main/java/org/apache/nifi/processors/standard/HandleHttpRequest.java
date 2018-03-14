@@ -17,6 +17,7 @@
 package org.apache.nifi.processors.standard;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -65,6 +66,7 @@ import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.standard.util.HTTPUtils;
 import org.apache.nifi.ssl.SSLContextService;
+import org.apache.nifi.stream.io.StreamUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -499,12 +501,26 @@ public class HandleHttpRequest extends AbstractProcessor {
         final long start = System.nanoTime();
         final HttpServletRequest request = container.getRequest();
         FlowFile flowFile = session.create();
-        try {
-            flowFile = session.importFrom(request.getInputStream(), flowFile);
+        try (OutputStream flowFileOut = session.write(flowFile)) {
+            StreamUtils.copy(request.getInputStream(), flowFileOut);
         } catch (final IOException e) {
+            // There may be many reasons which can produce an IOException on the HTTP stream and in some of them, eg.
+            // bad requests, the connection to the client is not closed. In order to address also these cases, we try
+            // and answer with a BAD_REQUEST, which lets the client know that the request has not been correctly
+            // processed and makes it aware that the connection can be closed.
             getLogger().error("Failed to receive content from HTTP Request from {} due to {}",
                     new Object[]{request.getRemoteAddr(), e});
             session.remove(flowFile);
+
+            try {
+                HttpServletResponse response = container.getResponse();
+                response.sendError(Status.BAD_REQUEST.getStatusCode());
+                response.flushBuffer();
+                container.getContext().complete();
+            } catch (final IOException ioe) {
+                getLogger().warn("Failed to send HTTP response to {} due to {}",
+                        new Object[]{request.getRemoteAddr(), ioe});
+            }
             return;
         }
 
