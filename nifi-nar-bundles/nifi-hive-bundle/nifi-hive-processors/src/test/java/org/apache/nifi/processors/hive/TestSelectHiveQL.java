@@ -388,6 +388,10 @@ public class TestSelectHiveQL {
 
         runner.run();
         runner.assertAllFlowFilesTransferred(SelectHiveQL.REL_SUCCESS, 1);
+        MockFlowFile flowFile = runner.getFlowFilesForRelationship(SelectHiveQL.REL_SUCCESS).get(0);
+        // Assert the attributes from the incoming flow file are preserved in the outgoing flow file(s)
+        flowFile.assertAttributeEquals("hiveql.args.1.value", "1");
+        flowFile.assertAttributeEquals("hiveql.args.1.type", String.valueOf(Types.INTEGER));
         runner.clearTransferState();
     }
 
