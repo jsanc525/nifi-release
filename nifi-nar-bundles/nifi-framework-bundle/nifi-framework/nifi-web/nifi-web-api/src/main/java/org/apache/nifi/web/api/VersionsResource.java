@@ -787,8 +787,7 @@ public class VersionsResource extends ApplicationResource {
                 final VersionedFlowState flowState = snapshotMetadata.getVersion() == flow.getVersionCount() ? VersionedFlowState.UP_TO_DATE : VersionedFlowState.STALE;
                 versionControlInfoDto.setState(flowState.name());
 
-                final NiFiUser user = NiFiUserUtils.getNiFiUser();
-                final ProcessGroupEntity updatedGroup = serviceFacade.updateProcessGroupContents(user, rev, groupId, versionControlInfoDto, flowSnapshot, getIdGenerationSeed().orElse(null), false,
+                final ProcessGroupEntity updatedGroup = serviceFacade.updateProcessGroupContents(rev, groupId, versionControlInfoDto, flowSnapshot, getIdGenerationSeed().orElse(null), false,
                     true, entity.getUpdateDescendantVersionedFlows());
                 final VersionControlInformationDTO updatedVci = updatedGroup.getComponent().getVersionControlInformation();
 
@@ -1084,7 +1083,7 @@ public class VersionsResource extends ApplicationResource {
         BundleUtils.discoverCompatibleBundles(flowSnapshot.getFlowContents());
 
         // Step 1: Determine which components will be affected by updating the version
-        final Set<AffectedComponentEntity> affectedComponents = serviceFacade.getComponentsAffectedByVersionChange(groupId, flowSnapshot, user);
+        final Set<AffectedComponentEntity> affectedComponents = serviceFacade.getComponentsAffectedByVersionChange(groupId, flowSnapshot);
 
         // build a request wrapper
         final InitiateChangeFlowVersionRequestWrapper requestWrapper = new InitiateChangeFlowVersionRequestWrapper(requestEntity, componentLifecycle, getAbsolutePath(), affectedComponents,
@@ -1125,7 +1124,7 @@ public class VersionsResource extends ApplicationResource {
                 final Consumer<AsynchronousWebRequest<VersionControlInformationEntity>> updateTask = vcur -> {
                     try {
                         final VersionControlInformationEntity updatedVersionControlEntity = updateFlowVersion(groupId, wrapper.getComponentLifecycle(), wrapper.getExampleUri(),
-                            wrapper.getAffectedComponents(), user, wrapper.isReplicateRequest(), revision, wrapper.getVersionControlInformationEntity(), wrapper.getFlowSnapshot(), request,
+                            wrapper.getAffectedComponents(), wrapper.isReplicateRequest(), revision, wrapper.getVersionControlInformationEntity(), wrapper.getFlowSnapshot(), request,
                             idGenerationSeed, true, true);
 
                         vcur.markComplete(updatedVersionControlEntity);
@@ -1240,7 +1239,7 @@ public class VersionsResource extends ApplicationResource {
         BundleUtils.discoverCompatibleBundles(flowSnapshot.getFlowContents());
 
         // Step 1: Determine which components will be affected by updating the version
-        final Set<AffectedComponentEntity> affectedComponents = serviceFacade.getComponentsAffectedByVersionChange(groupId, flowSnapshot, user);
+        final Set<AffectedComponentEntity> affectedComponents = serviceFacade.getComponentsAffectedByVersionChange(groupId, flowSnapshot);
 
         // build a request wrapper
         final InitiateChangeFlowVersionRequestWrapper requestWrapper = new InitiateChangeFlowVersionRequestWrapper(requestEntity, componentLifecycle, getAbsolutePath(), affectedComponents,
@@ -1303,7 +1302,7 @@ public class VersionsResource extends ApplicationResource {
                 final Consumer<AsynchronousWebRequest<VersionControlInformationEntity>> updateTask = vcur -> {
                     try {
                         final VersionControlInformationEntity updatedVersionControlEntity = updateFlowVersion(groupId, wrapper.getComponentLifecycle(), wrapper.getExampleUri(),
-                            wrapper.getAffectedComponents(), user, wrapper.isReplicateRequest(), revision, versionControlInformationEntity, wrapper.getFlowSnapshot(), request,
+                            wrapper.getAffectedComponents(), wrapper.isReplicateRequest(), revision, versionControlInformationEntity, wrapper.getFlowSnapshot(), request,
                             idGenerationSeed, false, true);
 
                         vcur.markComplete(updatedVersionControlEntity);
@@ -1342,7 +1341,7 @@ public class VersionsResource extends ApplicationResource {
     }
 
     private VersionControlInformationEntity updateFlowVersion(final String groupId, final ComponentLifecycle componentLifecycle, final URI exampleUri,
-        final Set<AffectedComponentEntity> affectedComponents, final NiFiUser user, final boolean replicateRequest, final Revision revision, final VersionControlInformationEntity requestEntity,
+        final Set<AffectedComponentEntity> affectedComponents, final boolean replicateRequest, final Revision revision, final VersionControlInformationEntity requestEntity,
         final VersionedFlowSnapshot flowSnapshot, final AsynchronousWebRequest<VersionControlInformationEntity> asyncRequest, final String idGenerationSeed,
         final boolean verifyNotModified, final boolean updateDescendantVersionedFlows) throws LifecycleManagementException, ResumeFlowException {
 
@@ -1362,7 +1361,7 @@ public class VersionsResource extends ApplicationResource {
         logger.info("Stopping {} Processors", runningComponents.size());
         final CancellableTimedPause stopComponentsPause = new CancellableTimedPause(250, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         asyncRequest.setCancelCallback(stopComponentsPause::cancel);
-        componentLifecycle.scheduleComponents(exampleUri, user, groupId, runningComponents, ScheduledState.STOPPED, stopComponentsPause);
+        componentLifecycle.scheduleComponents(exampleUri, groupId, runningComponents, ScheduledState.STOPPED, stopComponentsPause);
 
         if (asyncRequest.isCancelled()) {
             return null;
@@ -1378,7 +1377,7 @@ public class VersionsResource extends ApplicationResource {
         logger.info("Disabling {} Controller Services", enabledServices.size());
         final CancellableTimedPause disableServicesPause = new CancellableTimedPause(250, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         asyncRequest.setCancelCallback(disableServicesPause::cancel);
-        componentLifecycle.activateControllerServices(exampleUri, user, groupId, enabledServices, ControllerServiceState.DISABLED, disableServicesPause);
+        componentLifecycle.activateControllerServices(exampleUri, groupId, enabledServices, ControllerServiceState.DISABLED, disableServicesPause);
 
         if (asyncRequest.isCancelled()) {
             return null;
@@ -1386,10 +1385,12 @@ public class VersionsResource extends ApplicationResource {
         asyncRequest.update(new Date(), "Updating Flow", 40);
 
         logger.info("Updating Process Group with ID {} to version {} of the Versioned Flow", groupId, flowSnapshot.getSnapshotMetadata().getVersion());
+
         // If replicating request, steps 10-12 are performed on each node individually, and this is accomplished
         // by replicating a PUT to /nifi-api/versions/process-groups/{groupId}
         try {
             if (replicateRequest) {
+                final NiFiUser user = NiFiUserUtils.getNiFiUser();
 
                 final URI updateUri;
                 try {
@@ -1457,7 +1458,7 @@ public class VersionsResource extends ApplicationResource {
                 vci.setVersion(metadata.getVersion());
                 vci.setState(flowSnapshot.isLatest() ? VersionedFlowState.UP_TO_DATE.name() : VersionedFlowState.STALE.name());
 
-                serviceFacade.updateProcessGroupContents(user, revision, groupId, vci, flowSnapshot, idGenerationSeed, verifyNotModified, false, updateDescendantVersionedFlows);
+                serviceFacade.updateProcessGroupContents(revision, groupId, vci, flowSnapshot, idGenerationSeed, verifyNotModified, false, updateDescendantVersionedFlows);
             }
         } finally {
             if (!asyncRequest.isCancelled()) {
@@ -1470,11 +1471,11 @@ public class VersionsResource extends ApplicationResource {
                 // Step 13. Re-enable all disabled controller services
                 final CancellableTimedPause enableServicesPause = new CancellableTimedPause(250, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
                 asyncRequest.setCancelCallback(enableServicesPause::cancel);
-                final Set<AffectedComponentEntity> servicesToEnable = getUpdatedEntities(enabledServices, user);
+                final Set<AffectedComponentEntity> servicesToEnable = getUpdatedEntities(enabledServices);
                 logger.info("Successfully updated flow; re-enabling {} Controller Services", servicesToEnable.size());
 
                 try {
-                    componentLifecycle.activateControllerServices(exampleUri, user, groupId, servicesToEnable, ControllerServiceState.ENABLED, enableServicesPause);
+                    componentLifecycle.activateControllerServices(exampleUri, groupId, servicesToEnable, ControllerServiceState.ENABLED, enableServicesPause);
                 } catch (final IllegalStateException ise) {
                     // Component Lifecycle will re-enable the Controller Services only if they are valid. If IllegalStateException gets thrown, we need to provide
                     // a more intelligent error message as to exactly what happened, rather than indicate that the flow could not be updated.
@@ -1490,13 +1491,13 @@ public class VersionsResource extends ApplicationResource {
                 asyncRequest.update(new Date(), "Restarting Processors", 80);
 
                 // Step 14. Restart all components
-                final Set<AffectedComponentEntity> componentsToStart = getUpdatedEntities(runningComponents, user);
+                final Set<AffectedComponentEntity> componentsToStart = getUpdatedEntities(runningComponents);
                 final CancellableTimedPause startComponentsPause = new CancellableTimedPause(250, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
                 asyncRequest.setCancelCallback(startComponentsPause::cancel);
                 logger.info("Restarting {} Processors", componentsToStart.size());
 
                 try {
-                    componentLifecycle.scheduleComponents(exampleUri, user, groupId, componentsToStart, ScheduledState.RUNNING, startComponentsPause);
+                    componentLifecycle.scheduleComponents(exampleUri, groupId, componentsToStart, ScheduledState.RUNNING, startComponentsPause);
                 } catch (final IllegalStateException ise) {
                     // Component Lifecycle will restart the Processors only if they are valid. If IllegalStateException gets thrown, we need to provide
                     // a more intelligent error message as to exactly what happened, rather than indicate that the flow could not be updated.
@@ -1533,13 +1534,15 @@ public class VersionsResource extends ApplicationResource {
     }
 
 
-    private Set<AffectedComponentEntity> getUpdatedEntities(final Set<AffectedComponentEntity> originalEntities, final NiFiUser user) {
+    private Set<AffectedComponentEntity> getUpdatedEntities(final Set<AffectedComponentEntity> originalEntities) {
         final Set<AffectedComponentEntity> entities = new LinkedHashSet<>();
 
         for (final AffectedComponentEntity original : originalEntities) {
             try {
-                final AffectedComponentEntity updatedEntity = AffectedComponentUtils.updateEntity(original, serviceFacade, dtoFactory, user);
-                entities.add(updatedEntity);
+                final AffectedComponentEntity updatedEntity = AffectedComponentUtils.updateEntity(original, serviceFacade, dtoFactory);
+                if (updatedEntity != null) {
+                    entities.add(updatedEntity);
+                }
             } catch (final ResourceNotFoundException rnfe) {
                 // Component was removed. Just continue on without adding anything to the entities.
                 // We do this because the intent is to get updated versions of the entities with current
