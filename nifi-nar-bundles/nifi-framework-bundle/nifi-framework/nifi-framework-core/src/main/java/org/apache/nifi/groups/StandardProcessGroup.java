@@ -2640,6 +2640,10 @@ public final class StandardProcessGroup implements ProcessGroup {
 
     @Override
     public void verifyCanStop(Connectable connectable) {
+        final ScheduledState state = connectable.getScheduledState();
+        if (state == ScheduledState.DISABLED) {
+            throw new IllegalStateException("Cannot stop component with id " + connectable + " because it is currently disabled.");
+        }
     }
 
     @Override
