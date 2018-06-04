@@ -38,9 +38,9 @@ import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processor.util.list.AbstractListProcessor;
 import org.apache.nifi.processors.standard.util.FileInfo;
+import org.apache.nifi.processors.standard.util.FileInfoFilter;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
@@ -197,7 +197,7 @@ public class ListFile extends AbstractListProcessor<FileInfo> {
 
     private List<PropertyDescriptor> properties;
     private Set<Relationship> relationships;
-    private final AtomicReference<FileFilter> fileFilterRef = new AtomicReference<>();
+    private final AtomicReference<FileInfoFilter> fileFilterRef = new AtomicReference<>();
 
     private volatile boolean includeFileAttributes;
 
@@ -344,7 +344,7 @@ public class ListFile extends AbstractListProcessor<FileInfo> {
                 || IGNORE_HIDDEN_FILES.equals(property);
     }
 
-    private List<FileInfo> scanDirectory(final File path, final FileFilter filter, final Boolean recurse,
+    private List<FileInfo> scanDirectory(final File path, final FileInfoFilter filter, final Boolean recurse,
                                          final Long minTimestamp) throws IOException {
         final List<FileInfo> listing = new ArrayList<>();
         File[] files = path.listFiles();
@@ -355,14 +355,16 @@ public class ListFile extends AbstractListProcessor<FileInfo> {
                         listing.addAll(scanDirectory(file, filter, true, minTimestamp));
                     }
                 } else {
-                    if ((minTimestamp == null || file.lastModified() >= minTimestamp) && filter.accept(file)) {
-                        listing.add(new FileInfo.Builder()
-                                .directory(file.isDirectory())
-                                .filename(file.getName())
-                                .fullPathFileName(file.getAbsolutePath())
-                                .size(file.length())
-                                .lastModifiedTime(file.lastModified())
-                                .build());
+                    FileInfo fileInfo = new FileInfo.Builder()
+                        .directory(false)
+                        .filename(file.getName())
+                        .fullPathFileName(file.getAbsolutePath())
+                        .size(file.length())
+                        .lastModifiedTime(file.lastModified())
+                        .build();
+                    if ((minTimestamp == null || fileInfo.getLastModifiedTime() >= minTimestamp)
+                        && filter.accept(file, fileInfo)) {
+                        listing.add(fileInfo);
                     }
                 }
             }
@@ -371,7 +373,7 @@ public class ListFile extends AbstractListProcessor<FileInfo> {
         return listing;
     }
 
-    private FileFilter createFileFilter(final ProcessContext context) {
+    private FileInfoFilter createFileFilter(final ProcessContext context) {
         final long minSize = context.getProperty(MIN_SIZE).asDataSize(DataUnit.B).longValue();
         final Double maxSize = context.getProperty(MAX_SIZE).asDataSize(DataUnit.B);
         final long minAge = context.getProperty(MIN_AGE).asTimePeriod(TimeUnit.MILLISECONDS);
@@ -383,16 +385,16 @@ public class ListFile extends AbstractListProcessor<FileInfo> {
         final String pathPatternStr = context.getProperty(PATH_FILTER).getValue();
         final Pattern pathPattern = (!recurseDirs || pathPatternStr == null) ? null : Pattern.compile(pathPatternStr);
 
-        return new FileFilter() {
+        return new FileInfoFilter() {
             @Override
-            public boolean accept(final File file) {
-                if (minSize > file.length()) {
+            public boolean accept(final File file, final FileInfo info) {
+                if (minSize > info.getSize()) {
                     return false;
                 }
-                if (maxSize != null && maxSize < file.length()) {
+                if (maxSize != null && maxSize < info.getSize()) {
                     return false;
                 }
-                final long fileAge = System.currentTimeMillis() - file.lastModified();
+                final long fileAge = System.currentTimeMillis() - info.getLastModifiedTime();
                 if (minAge > fileAge) {
                     return false;
                 }
