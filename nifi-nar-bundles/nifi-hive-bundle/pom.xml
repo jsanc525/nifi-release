@@ -36,8 +36,8 @@
     </modules>
 
     <properties>
-        <hive.version>1.2.1</hive.version>
-        <hive.hadoop.version>2.6.2</hive.hadoop.version>
+        <hive.version>1.2.1000.2.5.3.0-37</hive.version>
+        <hive.hadoop.version>2.7.3.2.5.3.0-37</hive.hadoop.version>
         <hive3.version>3.0.0</hive3.version>
         <hive3.hadoop.version>3.0.0</hive3.hadoop.version>
         <orc.version>1.4.3</orc.version>
