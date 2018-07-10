@@ -30,7 +30,9 @@ import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.state.Scope;
+import org.apache.nifi.context.PropertyContext;
 import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.util.list.ListedEntityTracker;
 import org.apache.nifi.processors.standard.util.FileTransfer;
 import org.apache.nifi.processors.standard.util.FTPTransfer;
 
@@ -64,6 +66,7 @@ public class ListFTP extends ListFileTransfer {
         final PropertyDescriptor port = new PropertyDescriptor.Builder().fromPropertyDescriptor(UNDEFAULTED_PORT).defaultValue("21").build();
 
         final List<PropertyDescriptor> properties = new ArrayList<>();
+        properties.add(LISTING_STRATEGY);
         properties.add(HOSTNAME);
         properties.add(port);
         properties.add(USERNAME);
@@ -86,6 +89,9 @@ public class ListFTP extends ListFileTransfer {
         properties.add(FTPTransfer.HTTP_PROXY_PASSWORD);
         properties.add(FTPTransfer.BUFFER_SIZE);
         properties.add(TARGET_SYSTEM_TIMESTAMP_PRECISION);
+        properties.add(ListedEntityTracker.TRACKING_STATE_CACHE);
+        properties.add(ListedEntityTracker.TRACKING_TIME_WINDOW);
+        properties.add(ListedEntityTracker.INITIAL_LISTING_TARGET);
         return properties;
     }
 
@@ -100,7 +106,7 @@ public class ListFTP extends ListFileTransfer {
     }
 
     @Override
-    protected Scope getStateScope(final ProcessContext context) {
+    protected Scope getStateScope(final PropertyContext context) {
         // Use cluster scope so that component can be run on Primary Node Only and can still
         // pick up where it left off, even if the Primary Node changes.
         return Scope.CLUSTER;
