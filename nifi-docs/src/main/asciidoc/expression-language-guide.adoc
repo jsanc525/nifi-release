@@ -144,7 +144,7 @@ a Property supports the Expression Language is determined by the developer of th
 the Processor is written. However, the application strives to clearly illustrate for each Property
 whether or not the Expression Language is supported.
 
-In the application, when configuring a Processor property, the User Interface provides an Information
+In the application, when configuring a component property, the User Interface provides an Information
 icon (
 image:iconInfo.png["Info"]
 ) next to the name of the Property. Hovering over this icon with the mouse will provide a tooltip that
@@ -152,6 +152,28 @@ provides helpful information about the Property. This information includes a des
 the default value (if any), historically configured values (if any), and whether or not this Property
 supports the expression language.
 
+If more than two `$` characters are encountered sequentially before a `{`, then each pair of `$` characters will
+be considered an escaping of the `$` character. The escaping will be performed from left-to-right.
+To help illustrate this, consider that the variable `abc` contains the value `xyz`. Then, consider the following
+table of Expressions and their corresponding evaluated values:
+
+.Escaping EL Examples
+|========================================================================================
+| Expression | Value | Notes
+| `${abc}` | `xyz` |
+| `$${abc}` | `${abc}` |
+| `$$${abc}` | `$xyz` |
+| `$$$${abc}` | `$${abc}` |
+| `$$$$${abc}` | `$$xyz` |
+| `I owe you $5` | `I owe you $5` | No actual Expression is present here.
+| `You owe me $$5 too` | `You owe me $$5 too` | The $ character is not escaped because it does not immediately precede an Expression.
+| `Unescaped $$${5 because no closing brace` | `Unescaped $$${5 because no closing brace` | Because there is no closing brace here, there is no actual Expression and hence the $ characters are not
+escaped.
+| `Unescaped $$${5} because no closing brace` | <Error> | This expression is not valid because it equates to an escaped $, followed by `${5}` and the `${5}` is not a valid Expression. The number
+must be escaped.
+| `Unescaped $$${'5'} because no closing brace` | `Unescaped $ because no closing brace` | There is no attribute named `5` so the Expression evaluates to an empty string. The `$$` evaluates to a
+single (escaped) `$` because it immediately precedes an Expression.
+|========================================================================================
 
 [[editor]]
 === Expression Language Editor
@@ -1754,7 +1776,7 @@ In order to run the correct method, the parameter types must be correct. The Exp
 
 *Description*: [.description]#Formats a number as a date/time according to the format specified by the argument. The argument
 	must be a String that is a valid Java SimpleDateFormat format. The Subject is expected to be a Number that
-	represents the number of milliseconds since Midnight GMT on January 1, 1970. The number will be evaluated using the local 
+	represents the number of milliseconds since Midnight GMT on January 1, 1970. The number will be evaluated using the local
 	time zone unless specified in the second optional argument.#
 
 *Subject Type*: [.subject]#Number#
