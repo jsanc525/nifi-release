@@ -66,12 +66,6 @@ final class JMSConsumer extends JMSWorker {
         this.jmsTemplate.execute(new SessionCallback<Void>() {
             @Override
             public Void doInJms(Session session) throws JMSException {
-                /*
-                 * We need to call recover to ensure that in in the event of
-                 * abrupt end or exception the current session will stop message
-                 * delivery and restarts with the oldest unacknowledged message
-                 */
-                session.recover();
                 boolean isPubSub = JMSConsumer.this.jmsTemplate.isPubSubDomain();
                 Destination destination = JMSConsumer.this.jmsTemplate.getDestinationResolver().resolveDestinationName(
                         session, destinationName, isPubSub);
@@ -122,6 +116,12 @@ final class JMSConsumer extends JMSWorker {
                     if (message != null && session.getAcknowledgeMode() == Session.CLIENT_ACKNOWLEDGE) {
                         message.acknowledge();
                     }
+                } catch (JMSException e) {
+                    // We need to call recover to ensure that in the event of
+                    // abrupt end or exception the current session will stop message
+                    // delivery and restart with the oldest unacknowledged message
+                    session.recover();
+                    throw e;
                 } finally {
                     JmsUtils.closeMessageConsumer(msgConsumer);
                 }
