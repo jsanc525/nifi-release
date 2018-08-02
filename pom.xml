@@ -92,7 +92,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <inceptionYear>2014</inceptionYear>
         <org.slf4j.version>1.7.25</org.slf4j.version>
-        <jetty.version>9.4.3.v20170317</jetty.version>
+        <jetty.version>9.4.11.v20180605</jetty.version>
         <lucene.version>4.10.4</lucene.version>
         <spring.version>4.3.10.RELEASE</spring.version>
         <spring.security.version>4.2.4.RELEASE</spring.security.version>
@@ -345,8 +345,8 @@
                 <artifactId>quartz</artifactId>
                 <version>2.2.1</version>
                 <exclusions>
-                    <!-- | Exclude the quartz 2.2.1 bundled version of c3p0 
-                        because it is lgpl licensed | We also don't use the JDBC related features 
+                    <!-- | Exclude the quartz 2.2.1 bundled version of c3p0
+                        because it is lgpl licensed | We also don't use the JDBC related features
                         of quartz for which the dependency would matter -->
                     <exclusion>
                         <groupId>c3p0</groupId>
@@ -389,7 +389,7 @@
                 <artifactId>spring-core</artifactId>
                 <version>${spring.version}</version>
                 <exclusions>
-                    <!-- <artifactId>jcl-over-slf4j</artifactId> is used 
+                    <!-- <artifactId>jcl-over-slf4j</artifactId> is used
                         in dependencies section -->
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -1657,7 +1657,7 @@
                 <artifactId>nifi-registry-client</artifactId>
                 <version>${nifi.registry.version}</version>
             </dependency>
-            
+
             <dependency>
                 <groupId>com.jayway.jsonpath</groupId>
                 <artifactId>json-path</artifactId>
