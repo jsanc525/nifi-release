@@ -17,6 +17,7 @@
 
 package org.apache.nifi.cluster.coordination.http.replication;
 
+import java.util.Collection;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.authorization.AccessDeniedException;
 import org.apache.nifi.authorization.user.NiFiUser;
@@ -113,14 +114,14 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
     /**
      * Creates an instance using a connection timeout and read timeout of 3 seconds
      *
-     * @param corePoolSize core size of the thread pool
-     * @param maxPoolSize the max number of threads in the thread pool
+     * @param corePoolSize          core size of the thread pool
+     * @param maxPoolSize           the max number of threads in the thread pool
      * @param maxConcurrentRequests maximum number of concurrent requests
-     * @param client a client for making requests
-     * @param clusterCoordinator the cluster coordinator to use for interacting with node statuses
-     * @param callback a callback that will be called whenever all of the responses have been gathered for a request. May be null.
-     * @param eventReporter an EventReporter that can be used to notify users of interesting events. May be null.
-     * @param nifiProperties properties
+     * @param client                a client for making requests
+     * @param clusterCoordinator    the cluster coordinator to use for interacting with node statuses
+     * @param callback              a callback that will be called whenever all of the responses have been gathered for a request. May be null.
+     * @param eventReporter         an EventReporter that can be used to notify users of interesting events. May be null.
+     * @param nifiProperties        properties
      */
     public ThreadPoolRequestReplicator(final int corePoolSize, final int maxPoolSize, final int maxConcurrentRequests, final Client client, final ClusterCoordinator clusterCoordinator,
                                        final RequestCompletionCallback callback, final EventReporter eventReporter, final NiFiProperties nifiProperties) {
@@ -130,16 +131,16 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
     /**
      * Creates an instance.
      *
-     * @param corePoolSize core size of the thread pool
-     * @param maxPoolSize the max number of threads in the thread pool
+     * @param corePoolSize          core size of the thread pool
+     * @param maxPoolSize           the max number of threads in the thread pool
      * @param maxConcurrentRequests maximum number of concurrent requests
-     * @param client a client for making requests
-     * @param clusterCoordinator the cluster coordinator to use for interacting with node statuses
-     * @param connectionTimeout the connection timeout specified in milliseconds
-     * @param readTimeout the read timeout specified in milliseconds
-     * @param callback a callback that will be called whenever all of the responses have been gathered for a request. May be null.
-     * @param eventReporter an EventReporter that can be used to notify users of interesting events. May be null.
-     * @param nifiProperties properties
+     * @param client                a client for making requests
+     * @param clusterCoordinator    the cluster coordinator to use for interacting with node statuses
+     * @param connectionTimeout     the connection timeout specified in milliseconds
+     * @param readTimeout           the read timeout specified in milliseconds
+     * @param callback              a callback that will be called whenever all of the responses have been gathered for a request. May be null.
+     * @param eventReporter         an EventReporter that can be used to notify users of interesting events. May be null.
+     * @param nifiProperties        properties
      */
     public ThreadPoolRequestReplicator(final int corePoolSize, final int maxPoolSize, final int maxConcurrentRequests, final Client client, final ClusterCoordinator clusterCoordinator,
                                        final String connectionTimeout, final String readTimeout, final RequestCompletionCallback callback,
@@ -284,7 +285,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
     @Override
     public AsyncClusterResponse replicate(Set<NodeIdentifier> nodeIds, String method, URI uri, Object entity, Map<String, String> headers,
-                final boolean indicateReplicated, final boolean performVerification) {
+                                          final boolean indicateReplicated, final boolean performVerification) {
 
         return replicate(nodeIds, NiFiUserUtils.getNiFiUser(), method, uri, entity, headers, indicateReplicated, performVerification);
     }
@@ -344,7 +345,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
     @Override
     public AsyncClusterResponse forwardToCoordinator(final NodeIdentifier coordinatorNodeId, final NiFiUser user, final String method,
-                final URI uri, final Object entity, final Map<String, String> headers) {
+                                                     final URI uri, final Object entity, final Map<String, String> headers) {
         final Map<String, String> updatedHeaders = new HashMap<>(headers);
 
         // include the proxied entities header
@@ -368,7 +369,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
      * @return an AsyncClusterResponse that can be used to obtain the result
      */
     AsyncClusterResponse replicate(final Set<NodeIdentifier> nodeIds, final String method, final URI uri, final Object entity, final Map<String, String> headers,
-        final boolean performVerification, StandardAsyncClusterResponse response, final boolean executionPhase, final boolean merge, final Object monitor) {
+                                   final boolean performVerification, StandardAsyncClusterResponse response, final boolean executionPhase, final boolean merge, final Object monitor) {
         try {
             // state validation
             Objects.requireNonNull(nodeIds);
@@ -481,7 +482,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
             // replicate the request to all nodes
             final Function<NodeIdentifier, NodeHttpRequest> requestFactory =
-                nodeId -> new NodeHttpRequest(nodeId, method, createURI(uri, nodeId), entity, updatedHeaders, nodeCompletionCallback, finalResponse);
+                    nodeId -> new NodeHttpRequest(nodeId, method, createURI(uri, nodeId), entity, updatedHeaders, nodeCompletionCallback, finalResponse);
             submitAsyncRequest(nodeIds, uri.getScheme(), uri.getPath(), requestFactory, updatedHeaders);
 
             return response;
@@ -504,7 +505,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
 
     private void performVerification(final Set<NodeIdentifier> nodeIds, final String method, final URI uri, final Object entity, final Map<String, String> headers,
-        final StandardAsyncClusterResponse clusterResponse, final boolean merge, final Object monitor) {
+                                     final StandardAsyncClusterResponse clusterResponse, final boolean merge, final Object monitor) {
         logger.debug("Verifying that mutable request {} {} can be made", method, uri.getPath());
 
         final Map<String, String> validationHeaders = new HashMap<>(headers);
@@ -558,7 +559,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
                                     logger.debug("Found {} dissenting nodes for {} {}; canceling claim request", dissentingCount, method, uri.getPath());
 
                                     final Function<NodeIdentifier, NodeHttpRequest> requestFactory =
-                                        nodeId -> new NodeHttpRequest(nodeId, method, createURI(uri, nodeId), entity, cancelLockHeaders, null, clusterResponse);
+                                            nodeId -> new NodeHttpRequest(nodeId, method, createURI(uri, nodeId), entity, cancelLockHeaders, null, clusterResponse);
 
                                     submitAsyncRequest(nodeIds, uri.getScheme(), uri.getPath(), requestFactory, cancelLockHeaders);
                                 }
@@ -583,7 +584,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
                                         message = "Node " + response.getNodeId() + " is unable to fulfill this request due to: " + nodeExplanation;
 
                                         logger.info("Received a status of {} from {} for request {} {} when performing first stage of two-stage commit. "
-                                            + "The action will not occur. Node explanation: {}", response.getStatus(), response.getNodeId(), method, uri.getPath(), nodeExplanation);
+                                                + "The action will not occur. Node explanation: {}", response.getStatus(), response.getNodeId(), method, uri.getPath(), nodeExplanation);
                                     }
 
                                     // if a node reports forbidden, use that as the response failure
@@ -633,7 +634,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
         // Callback function for generating a NodeHttpRequestCallable that can be used to perform the work
         final Function<NodeIdentifier, NodeHttpRequest> requestFactory = nodeId -> new NodeHttpRequest(nodeId, method, createURI(uri, nodeId), entity, validationHeaders, completionCallback,
-            clusterResponse);
+                clusterResponse);
 
         // replicate the 'verification request' to all nodes
         submitAsyncRequest(nodeIds, uri.getScheme(), uri.getPath(), requestFactory, validationHeaders);
@@ -652,7 +653,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
     // Visible for testing - overriding this method makes it easy to verify behavior without actually making any web requests
     protected NodeResponse replicateRequest(final Invocation invocation, final NodeIdentifier nodeId, final String method, final URI uri, final String requestId,
-        final Map<String, String> headers, final StandardAsyncClusterResponse clusterResponse) {
+                                            final Map<String, String> headers, final StandardAsyncClusterResponse clusterResponse) {
         final Response response;
         final long startNanos = System.nanoTime();
         logger.debug("Replicating request to {} {}, request ID = {}, headers = {}", method, uri, requestId, headers);
@@ -788,7 +789,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
 
     private void submitAsyncRequest(final Set<NodeIdentifier> nodeIds, final String scheme, final String path,
-                                  final Function<NodeIdentifier, NodeHttpRequest> callableFactory, final Map<String, String> headers) {
+                                    final Function<NodeIdentifier, NodeHttpRequest> callableFactory, final Map<String, String> headers) {
 
         if (nodeIds.isEmpty()) {
             return; // return quickly for trivial case
@@ -830,7 +831,7 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
         private final GZipEncoder gzipEncoder = new GZipEncoder();
 
         private NodeHttpRequest(final NodeIdentifier nodeId, final String method, final URI uri, final Object entity, final Map<String, String> headers,
-            final NodeRequestCompletionCallback callback, final StandardAsyncClusterResponse clusterResponse) {
+                                final NodeRequestCompletionCallback callback, final StandardAsyncClusterResponse clusterResponse) {
             this.nodeId = nodeId;
             this.method = method;
             this.uri = uri;
@@ -890,7 +891,13 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
             final MultivaluedHashMap<String, String> map = new MultivaluedHashMap();
 
             if (entity instanceof MultivaluedMap) {
-                map.putAll((Map) entity);
+                // TODO: Cleanup
+                if (HttpMethod.DELETE.equalsIgnoreCase(method)) {
+                    logger.warn("The request is DELETE but contains an entity: ");
+                    logger.warn(dumpMap((Map) entity));
+                } else {
+                    map.putAll((Map) entity);
+                }
             }
 
             // create the resource
@@ -913,7 +920,13 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
                     builder = builder.header(entry.getKey(), entry.getValue());
                 }
 
-                invocation = builder.build(method);
+                // Explicitly build the DELETE method to avoid providing the undesired (malicious) body
+                if (HttpMethod.DELETE.equalsIgnoreCase(method)) {
+                    logger.debug("This is a DELETE request and should not have a body");
+                    invocation = builder.buildDelete();
+                } else {
+                    invocation = builder.build(method);
+                }
             } else {
                 Invocation.Builder builder = webTarget.request();
 
@@ -943,6 +956,26 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
             }
 
             return invocation;
+        }
+
+        /**
+         * Returns a String representing the class and contents of a Map.
+         *
+         * @param entity the Map to dump
+         * @return a String representation of the class, keys and values
+         */
+        private String dumpMap(Map entity) {
+            StringBuilder sb = new StringBuilder("Map (").append(entity.getClass().getCanonicalName()).append(") ");
+            entity.forEach((key, value) -> {
+                sb.append(key).append(": ");
+                // Uses MultivaluedMap above, so <String, String> is actually <String, List<String>>
+                if (value instanceof Collection) {
+                    sb.append("[").append(StringUtils.join(value, ", ")).append("]");
+                } else {
+                    sb.append(value).append(", ");
+                }
+            });
+            return sb.toString().substring(0, sb.lastIndexOf(","));
         }
     }
 
