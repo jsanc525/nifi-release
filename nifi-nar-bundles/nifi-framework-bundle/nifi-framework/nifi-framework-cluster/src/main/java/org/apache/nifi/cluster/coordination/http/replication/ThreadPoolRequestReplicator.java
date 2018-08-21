@@ -17,7 +17,44 @@
 
 package org.apache.nifi.cluster.coordination.http.replication;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.LongSummaryStatistics;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.authorization.AccessDeniedException;
 import org.apache.nifi.authorization.user.NiFiUser;
@@ -48,44 +85,6 @@ import org.glassfish.jersey.client.filter.EncodingFilter;
 import org.glassfish.jersey.message.GZipEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedHashMap;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.LongSummaryStatistics;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ThreadPoolRequestReplicator implements RequestReplicator {
 
@@ -888,16 +887,10 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
         private Invocation createInvocation(final boolean useGzip) {
             // convert parameters to a more convenient data structure
-            final MultivaluedHashMap<String, String> map = new MultivaluedHashMap();
+            final MultivaluedHashMap<String, String> map = new MultivaluedHashMap<>();
 
             if (entity instanceof MultivaluedMap) {
-                // TODO: Cleanup
-                if (HttpMethod.DELETE.equalsIgnoreCase(method)) {
-                    logger.warn("The request is DELETE but contains an entity: ");
-                    logger.warn(dumpMap((Map) entity));
-                } else {
-                    map.putAll((Map) entity);
-                }
+                map.putAll((Map) entity);
             }
 
             // create the resource
@@ -917,16 +910,18 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
 
                 Invocation.Builder builder = webTarget.request();
                 for (final Map.Entry<String, String> entry : headers.entrySet()) {
+                    if (HttpMethod.DELETE.equalsIgnoreCase(method)) {
+                        if (entry.getKey().equalsIgnoreCase("Content-Length")) {
+                            if (!entry.getValue().equalsIgnoreCase("0")) {
+                                logger.warn("This is a DELETE request; the provided Content-Length was {}; setting Content-Length to 0", entry.getValue());
+                            }
+                            builder = builder.header(entry.getKey(), "0");
+                            continue;
+                        }
+                    }
                     builder = builder.header(entry.getKey(), entry.getValue());
                 }
-
-                // Explicitly build the DELETE method to avoid providing the undesired (malicious) body
-                if (HttpMethod.DELETE.equalsIgnoreCase(method)) {
-                    logger.debug("This is a DELETE request and should not have a body");
-                    invocation = builder.buildDelete();
-                } else {
-                    invocation = builder.build(method);
-                }
+                invocation = builder.build(method);
             } else {
                 Invocation.Builder builder = webTarget.request();
 
@@ -975,11 +970,11 @@ public class ThreadPoolRequestReplicator implements RequestReplicator {
                     sb.append(value).append(", ");
                 }
             });
-            return sb.toString().substring(0, sb.lastIndexOf(","));
+            return sb.toString().substring(0, Math.max(sb.lastIndexOf(","), 0));
         }
     }
 
-    private static interface NodeRequestCompletionCallback {
+    private interface NodeRequestCompletionCallback {
         void onCompletion(NodeResponse nodeResponse);
     }
 
