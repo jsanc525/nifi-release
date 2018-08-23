@@ -27,6 +27,7 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.apache.nifi.util.NiFiProperties;
 import org.junit.Test;
 
+import static org.apache.nifi.security.util.KeyStoreUtils.SUN_PROVIDER_NAME;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -95,7 +96,7 @@ public class JettyServerTest {
         JettyServer.configureSslContextFactory(contextFactory, nifiProperties);
 
         verify(contextFactory).setKeyStoreType(keyStoreType);
-        verify(contextFactory, never()).setKeyStoreProvider(anyString());
+        verify(contextFactory).setKeyStoreProvider(SUN_PROVIDER_NAME);
     }
 
     @Test
@@ -125,7 +126,7 @@ public class JettyServerTest {
         JettyServer.configureSslContextFactory(contextFactory, nifiProperties);
 
         verify(contextFactory).setTrustStoreType(trustStoreType);
-        verify(contextFactory, never()).setTrustStoreProvider(anyString());
+        verify(contextFactory).setTrustStoreProvider(SUN_PROVIDER_NAME);
     }
 
     @Test
