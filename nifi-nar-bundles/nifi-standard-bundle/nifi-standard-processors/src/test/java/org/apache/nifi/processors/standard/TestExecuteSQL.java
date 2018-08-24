@@ -17,12 +17,17 @@
 package org.apache.nifi.processors.standard;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
@@ -226,6 +231,33 @@ public class TestExecuteSQL {
         // There should be no flow files on either relationship
         runner.assertAllFlowFilesTransferred(ExecuteSQL.REL_FAILURE, 0);
         runner.assertAllFlowFilesTransferred(ExecuteSQL.REL_SUCCESS, 0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testWithSqlExceptionErrorProcessingResultSet() throws Exception {
+        DBCPService dbcp = mock(DBCPService.class);
+        Connection conn = mock(Connection.class);
+        when(dbcp.getConnection()).thenReturn(conn);
+        when(dbcp.getIdentifier()).thenReturn("mockdbcp");
+        PreparedStatement statement = mock(PreparedStatement.class);
+        when(conn.createStatement()).thenReturn(statement);
+        when(statement.execute(anyString())).thenReturn(true);
+        ResultSet rs = mock(ResultSet.class);
+        when(statement.getResultSet()).thenReturn(rs);
+        // Throw an exception the first time you access the ResultSet, this is after the flow file to hold the results has been created.
+        when(rs.getMetaData()).thenThrow(SQLException.class);
+
+        runner.addControllerService("mockdbcp", dbcp, new HashMap<>());
+        runner.enableControllerService(dbcp);
+        runner.setProperty(ExecuteSQL.DBCP_SERVICE, "mockdbcp");
+
+        runner.setIncomingConnection(true);
+        runner.enqueue("SELECT 1");
+        runner.run();
+
+        runner.assertTransferCount(ExecuteSQL.REL_FAILURE, 1);
+        runner.assertTransferCount(ExecuteSQL.REL_SUCCESS, 0);
     }
 
     public void invokeOnTrigger(final Integer queryTimeout, final String query, final boolean incomingFlowFile, final boolean setQueryProperty)
