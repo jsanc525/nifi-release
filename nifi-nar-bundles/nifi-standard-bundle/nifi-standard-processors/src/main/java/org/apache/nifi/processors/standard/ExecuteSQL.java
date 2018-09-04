@@ -74,10 +74,10 @@ import static org.apache.nifi.processors.standard.util.JdbcCommon.USE_AVRO_LOGIC
 @WritesAttribute(attribute="executesql.query.duration", description = "Duration of the query in milliseconds")
 })
 public class ExecuteSQL extends AbstractProcessor {
-    
+
     public static final String RESULT_ROW_COUNT = "executesql.row.count";
     public static final String RESULT_QUERY_DURATION = "executesql.query.duration";
-    
+
     // Relationships
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
     .name("success")
@@ -88,14 +88,14 @@ public class ExecuteSQL extends AbstractProcessor {
     .description("SQL query execution failed. Incoming FlowFile will be penalized and routed to this relationship")
     .build();
     private final Set<Relationship> relationships;
-    
+
     public static final PropertyDescriptor DBCP_SERVICE = new PropertyDescriptor.Builder()
     .name("Database Connection Pooling Service")
     .description("The Controller Service that is used to obtain connection to database")
     .required(true)
     .identifiesControllerService(DBCPService.class)
     .build();
-    
+
     public static final PropertyDescriptor SQL_SELECT_QUERY = new PropertyDescriptor.Builder()
     .name("SQL select query")
     .description("The SQL select query to execute. The query can be empty, a constant value, or built from attributes "
@@ -107,7 +107,7 @@ public class ExecuteSQL extends AbstractProcessor {
     .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
     .expressionLanguageSupported(true)
     .build();
-    
+
     public static final PropertyDescriptor QUERY_TIMEOUT = new PropertyDescriptor.Builder()
     .name("Max Wait Time")
     .description("The maximum amount of time allowed for a running SQL select query "
@@ -117,15 +117,15 @@ public class ExecuteSQL extends AbstractProcessor {
     .addValidator(StandardValidators.TIME_PERIOD_VALIDATOR)
     .sensitive(false)
     .build();
-    
+
     private final List<PropertyDescriptor> propDescriptors;
-    
+
     public ExecuteSQL() {
         final Set<Relationship> r = new HashSet<>();
         r.add(REL_SUCCESS);
         r.add(REL_FAILURE);
         relationships = Collections.unmodifiableSet(r);
-        
+
         final List<PropertyDescriptor> pds = new ArrayList<>();
         pds.add(DBCP_SERVICE);
         pds.add(SQL_SELECT_QUERY);
@@ -136,17 +136,17 @@ public class ExecuteSQL extends AbstractProcessor {
         pds.add(DEFAULT_SCALE);
         propDescriptors = Collections.unmodifiableList(pds);
     }
-    
+
     @Override
     public Set<Relationship> getRelationships() {
         return relationships;
     }
-    
+
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
         return propDescriptors;
     }
-    
+
     @OnScheduled
     public void setup(ProcessContext context) {
         // If the query is not set, then an incoming flow file is needed. Otherwise fail the initialization
@@ -157,13 +157,13 @@ public class ExecuteSQL extends AbstractProcessor {
             throw new ProcessException(errorString);
         }
     }
-    
+
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         FlowFile fileToProcess = null;
         if (context.hasIncomingConnection()) {
             fileToProcess = session.get();
-            
+
             // If we have no FlowFile, and all incoming connections are self-loops then we can continue on.
             // However, if we have no FlowFile and we have connections coming from other Processors, then
             // we know that we should run only if we have a FlowFile.
@@ -171,7 +171,7 @@ public class ExecuteSQL extends AbstractProcessor {
                 return;
             }
         }
-        
+
         final ComponentLog logger = getLogger();
         final DBCPService dbcpService = context.getProperty(DBCP_SERVICE).asControllerService(DBCPService.class);
         final Integer queryTimeout = context.getProperty(QUERY_TIMEOUT).asTimePeriod(TimeUnit.SECONDS).intValue();
@@ -195,16 +195,15 @@ public class ExecuteSQL extends AbstractProcessor {
             });
             selectQuery = queryContents.toString();
         }
-        
+
         int resultCount=0;
         try (final Connection con = dbcpService.getConnection();
              final Statement st = con.createStatement()) {
             st.setQueryTimeout(queryTimeout); // timeout in seconds
-            
+
             logger.debug("Executing query {}", new Object[]{selectQuery});
             boolean results = st.execute(selectQuery);
-            
-            
+
             while(results){
                 FlowFile resultSetFF;
                 if(fileToProcess == null){
@@ -254,7 +253,7 @@ public class ExecuteSQL extends AbstractProcessor {
                         throw new ProcessException(e);
                     }
                 }
-                
+
                 resultCount++;
                 // are there anymore result sets?
                 try{
@@ -263,7 +262,7 @@ public class ExecuteSQL extends AbstractProcessor {
                     results = false;
                 }
             }
-            
+
             //If we had at least one result then it's OK to drop the original file, but if we had no results then
             //  pass the original flow file down the line to trigger downstream processors
             if(fileToProcess != null){
@@ -276,7 +275,7 @@ public class ExecuteSQL extends AbstractProcessor {
                             JdbcCommon.createEmptyAvroStream(out);
                         }
                     });
-                    
+
                     session.transfer(fileToProcess, REL_SUCCESS);
                 }
             }
