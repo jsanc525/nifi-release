@@ -122,7 +122,7 @@ public class NiFiWebApiSecurityConfiguration extends WebSecurityConfigurerAdapte
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedMethods(Arrays.asList());
+        configuration.setAllowedMethods(Arrays.asList("HEAD", "GET"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/process-groups/*/templates/upload", configuration);
         return source;
