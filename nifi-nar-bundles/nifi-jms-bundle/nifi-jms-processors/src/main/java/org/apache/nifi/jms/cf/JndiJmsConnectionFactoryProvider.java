@@ -26,7 +26,6 @@ import org.apache.nifi.components.PropertyDescriptor.Builder;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
-import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 
@@ -46,8 +45,7 @@ import static org.apache.nifi.processor.util.StandardValidators.NON_EMPTY_VALIDA
     description = "In order to perform a JNDI Lookup, an Initial Context must be established. When this is done, an Environment can be established for the context. Any dynamic/user-defined property" +
         " that is added to this Controller Service will be added as an Environment configuration/variable to this Context.",
     name = "The name of a JNDI Initial Context environment variable.",
-    value = "The value of the JNDI Initial Context Environment variable.",
-    expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY)
+    value = "The value of the JNDI Initial Context Environment variable.")
 @SeeAlso(classNames = {"org.apache.nifi.jms.processors.ConsumeJMS", "org.apache.nifi.jms.processors.PublishJMS", "org.apache.nifi.jms.cf.JMSConnectionFactoryProvider"})
 public class JndiJmsConnectionFactoryProvider extends AbstractControllerService implements JMSConnectionFactoryProviderDefinition{
 
@@ -56,7 +54,7 @@ public class JndiJmsConnectionFactoryProvider extends AbstractControllerService 
         .displayName("Initial Naming Factory Class")
         .description("The fully qualified class name of the Java Initial Naming Factory (java.naming.factory.initial).")
         .addValidator(NON_EMPTY_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(true)
         .required(true)
         .build();
     static final PropertyDescriptor NAMING_PROVIDER_URL = new Builder()
@@ -65,7 +63,7 @@ public class JndiJmsConnectionFactoryProvider extends AbstractControllerService 
         .description("The URL of the JNDI Naming Provider to use")
         .required(true)
         .addValidator(NON_EMPTY_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(true)
         .build();
     static final PropertyDescriptor CONNECTION_FACTORY_NAME = new Builder()
         .name("connection.factory.name")
@@ -73,14 +71,14 @@ public class JndiJmsConnectionFactoryProvider extends AbstractControllerService 
         .description("The name of the JNDI Object to lookup for the Connection Factory")
         .required(true)
         .addValidator(NON_EMPTY_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(true)
         .build();
     static final PropertyDescriptor NAMING_FACTORY_LIBRARIES = new Builder()
         .name("naming.factory.libraries")
         .displayName("Naming Factory Libraries")
         .description("Specifies .jar files or directories to add to the ClassPath in order to find the Initial Naming Factory Class")
         .required(false)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(true)
         .addValidator(StandardValidators.createListValidator(true, true, StandardValidators.createURLorFileValidator()))
         .dynamicallyModifiesClasspath(true)
         .build();
@@ -89,7 +87,7 @@ public class JndiJmsConnectionFactoryProvider extends AbstractControllerService 
         .displayName("JNDI Principal")
         .description("The Principal to use when authenticating with JNDI")
         .required(false)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(true)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
     static final PropertyDescriptor CREDENTIALS = new Builder()
@@ -97,7 +95,7 @@ public class JndiJmsConnectionFactoryProvider extends AbstractControllerService 
         .displayName("Credentials")
         .description("The Credentials to use when authenticating with JNDI")
         .required(false)
-        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .expressionLanguageSupported(false)
         .addValidator(Validator.VALID)
         .sensitive(true)
         .build();
@@ -126,7 +124,7 @@ public class JndiJmsConnectionFactoryProvider extends AbstractControllerService 
             .required(false)
             .dynamic(true)
             .addValidator(Validator.VALID)
-            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+            .expressionLanguageSupported(true)
             .build();
     }
 
