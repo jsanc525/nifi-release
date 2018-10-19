@@ -114,7 +114,7 @@ public class CSVRecordReader implements RecordReader {
             return value;
         }
 
-        final String trimmed = value.startsWith("\"") && value.endsWith("\"") ? value.substring(1, value.length() - 1) : value;
+        final String trimmed = (value.length() > 1) && value.startsWith("\"") && value.endsWith("\"") ? value.substring(1, value.length() - 1) : value;
 
         if (trimmed.isEmpty()) {
             return null;

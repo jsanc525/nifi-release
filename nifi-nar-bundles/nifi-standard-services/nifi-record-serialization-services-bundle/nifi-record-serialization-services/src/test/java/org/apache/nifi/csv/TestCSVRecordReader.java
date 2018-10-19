@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -208,19 +209,22 @@ public class TestCSVRecordReader {
     @Test
     public void testQuote() throws IOException, MalformedRecordException {
         final CSVFormat format = CSVFormat.RFC4180.withFirstRecordAsHeader().withTrim().withQuote('"');
-        final String text = "\"name\"\n\"\"\"\"";
+        final String text = "\"name\"\n\"\"\"\"\n\"\"\"\"";
 
         final List<RecordField> fields = new ArrayList<>();
         fields.add(new RecordField("name", RecordFieldType.STRING.getDataType()));
         final RecordSchema schema = new SimpleRecordSchema(fields);
 
         try (final InputStream bais = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
-             final CSVRecordReader reader = new CSVRecordReader(bais, Mockito.mock(ComponentLog.class), schema, format, true, false,
-                     RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat(), StandardCharsets.UTF_8.name())) {
+             final CSVRecordReader reader = new CSVRecordReader(bais, Mockito.mock(ComponentLog.class), schema, format,
+                     RecordFieldType.DATE.getDefaultFormat(), RecordFieldType.TIME.getDefaultFormat(), RecordFieldType.TIMESTAMP.getDefaultFormat())) {
 
-            final Record record = reader.nextRecord();
-            final String name = (String)record.getValue("name");
+            Record record = reader.nextRecord();
+            String name = (String)record.getValue("name");
+            assertEquals("\"", name);
 
+            record = reader.nextRecord();
+            name = (String)record.getValue("name");
             assertEquals("\"", name);
         }
     }
