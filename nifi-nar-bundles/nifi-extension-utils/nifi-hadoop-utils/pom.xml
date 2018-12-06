@@ -18,10 +18,10 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-extension-utils</artifactId>
-        <version>1.5.0</version>
+        <version>1.5.0.3.1.1.26-2</version>
     </parent>
     <artifactId>nifi-hadoop-utils</artifactId>
-    <version>1.5.0</version>
+    <version>1.5.0.3.1.1.26-2</version>
     <packaging>jar</packaging>
 
     <dependencies>
