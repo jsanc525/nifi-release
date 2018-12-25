@@ -16,23 +16,31 @@
  */
 package org.apache.nifi.remote.io.socket;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.channels.SocketChannel;
 import org.apache.nifi.remote.io.InterruptableInputStream;
 import org.apache.nifi.remote.protocol.CommunicationsInput;
 import org.apache.nifi.stream.io.ByteCountingInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SocketChannelInput implements CommunicationsInput {
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Socket;
+import java.net.SocketException;
 
-    private final SocketChannelInputStream socketIn;
+public class SocketInput implements CommunicationsInput {
+
+    private static final Logger LOG = LoggerFactory.getLogger(SocketInput.class);
+
+    private final Socket socket;
+    private final InputStream socketIn;
     private final ByteCountingInputStream countingIn;
     private final InputStream bufferedIn;
     private final InterruptableInputStream interruptableIn;
 
-    public SocketChannelInput(final SocketChannel socketChannel) throws IOException {
-        this.socketIn = new SocketChannelInputStream(socketChannel);
+    public SocketInput(final Socket socket) throws IOException {
+        this.socket = socket;
+        socketIn = socket.getInputStream();
         countingIn = new ByteCountingInputStream(socketIn);
         bufferedIn = new BufferedInputStream(countingIn);
         interruptableIn = new InterruptableInputStream(bufferedIn);
@@ -44,7 +52,11 @@ public class SocketChannelInput implements CommunicationsInput {
     }
 
     public void setTimeout(final int millis) {
-        socketIn.setTimeout(millis);
+        try {
+            socket.setSoTimeout(millis);
+        } catch (SocketException e) {
+            LOG.warn("Failed to set socket timeout.", e);
+        }
     }
 
     public boolean isDataAvailable() {
@@ -66,6 +78,14 @@ public class SocketChannelInput implements CommunicationsInput {
 
     @Override
     public void consume() throws IOException {
-        socketIn.consume();
+        if (interruptableIn == null || !isDataAvailable()) {
+            return;
+        }
+
+        final byte[] b = new byte[4096];
+        int bytesRead;
+        do {
+            bytesRead = interruptableIn.read(b);
+        } while (bytesRead > 0);
     }
 }
