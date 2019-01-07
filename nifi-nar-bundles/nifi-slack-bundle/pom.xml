@@ -19,12 +19,12 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-nar-bundles</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.0.3.0.2.8-4</version>
     </parent>
 
     <groupId>org.apache.nifi</groupId>
     <artifactId>nifi-slack-bundle</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.0.3.0.2.8-4</version>
     <packaging>pom</packaging>
 
     <modules>
