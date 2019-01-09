@@ -703,7 +703,10 @@ public class StandardFlowService implements FlowService, ProtocolHandler {
                     .stream().filter(pn -> pn.getScheduledState() == ScheduledState.STOPPED)
                     .forEach(pn -> pn.getProcessGroup().terminateProcessor(pn));
             // request to stop all remote process groups
-            controller.getRootGroup().findAllRemoteProcessGroups().forEach(RemoteProcessGroup::stopTransmitting);
+            controller.getRootGroup().findAllRemoteProcessGroups()
+                    .stream().filter(rpg -> rpg.isTransmitting())
+                    .forEach(RemoteProcessGroup::stopTransmitting);
+
             // offload all queues on node
             controller.getAllQueues().forEach(FlowFileQueue::offloadQueue);
             // wait for rebalance of flowfiles on all queues
