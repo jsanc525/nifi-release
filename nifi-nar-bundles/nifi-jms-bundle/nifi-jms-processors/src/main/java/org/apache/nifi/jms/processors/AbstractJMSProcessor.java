@@ -155,8 +155,31 @@ abstract class AbstractJMSProcessor<T extends JMSWorker> extends AbstractProcess
             worker = buildTargetResource(context);
         }
 
-        rendezvousWithJms(context, session, worker);
-        workerPool.offer(worker);
+        try {
+            rendezvousWithJms(context, session, worker);
+        } finally {
+            //in case of exception during worker's connection (consumer or publisher),
+            //an appropriate service is responsible to invalidate the worker.
+            //if worker is not valid anymore, don't put it back into a pool, try to rebuild it first, or discard.
+            //this will be helpful in a situation, when JNDI has changed, or JMS server is not available
+            //and reconnection is required.
+            if (worker == null || !worker.isValid()){
+                getLogger().debug("Worker is invalid. Will try re-create... ");
+                final JMSConnectionFactoryProviderDefinition cfProvider = context.getProperty(CF_SERVICE).asControllerService(JMSConnectionFactoryProviderDefinition.class);
+                try {
+                    // Safe to cast. Method #buildTargetResource(ProcessContext context) sets only CachingConnectionFactory
+                    CachingConnectionFactory currentCF = (CachingConnectionFactory)worker.jmsTemplate.getConnectionFactory();
+                    cfProvider.resetConnectionFactory(currentCF.getTargetConnectionFactory());
+                    worker = buildTargetResource(context);
+                }catch(Exception e) {
+                    getLogger().error("Failed to rebuild:  " + cfProvider);
+                    worker = null;
+                }
+            }
+            if (worker != null) {
+                workerPool.offer(worker);
+            }
+        }
     }
 
     @OnScheduled
