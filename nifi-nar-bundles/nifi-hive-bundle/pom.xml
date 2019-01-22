@@ -37,6 +37,20 @@
         <module>nifi-hive3-nar</module>
     </modules>
 
+    <repositories>
+        <repository>
+                    <id>cloudera-repo</id>
+                    <name>Cloudera Repository</name>
+                    <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
