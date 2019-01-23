@@ -134,7 +134,7 @@ public class TestSelectHive_1_1QL {
         invokeOnTrigger(QUERY_WITH_EL, true, "Avro");
 
         final List<ProvenanceEventRecord> provenanceEvents = runner.getProvenanceEvents();
-        assertEquals(3, provenanceEvents.size());
+        assertEquals(2, provenanceEvents.size());
 
         final ProvenanceEventRecord provenance0 = provenanceEvents.get(0);
         assertEquals(ProvenanceEventType.FORK, provenance0.getEventType());
@@ -142,9 +142,6 @@ public class TestSelectHive_1_1QL {
         final ProvenanceEventRecord provenance1 = provenanceEvents.get(1);
         assertEquals(ProvenanceEventType.FETCH, provenance1.getEventType());
         assertEquals("jdbc:derby:target/db;create=true", provenance1.getTransitUri());
-
-        final ProvenanceEventRecord provenance2 = provenanceEvents.get(2);
-        assertEquals(ProvenanceEventType.FORK, provenance2.getEventType());
     }
 
 
