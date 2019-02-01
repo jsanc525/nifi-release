@@ -16,6 +16,29 @@
  */
 package org.apache.nifi.controller;
 
+import org.apache.nifi.controller.queue.FlowFileQueue;
+import org.apache.nifi.controller.queue.QueueSize;
+import org.apache.nifi.controller.repository.FlowFileRecord;
+import org.apache.nifi.controller.repository.FlowFileRepository;
+import org.apache.nifi.controller.repository.FlowFileSwapManager;
+import org.apache.nifi.controller.repository.SwapContents;
+import org.apache.nifi.controller.repository.SwapManagerInitializationContext;
+import org.apache.nifi.controller.repository.SwapSummary;
+import org.apache.nifi.controller.repository.claim.ResourceClaimManager;
+import org.apache.nifi.controller.swap.SchemaSwapDeserializer;
+import org.apache.nifi.controller.swap.SchemaSwapSerializer;
+import org.apache.nifi.controller.swap.SimpleSwapDeserializer;
+import org.apache.nifi.controller.swap.StandardSwapContents;
+import org.apache.nifi.controller.swap.StandardSwapSummary;
+import org.apache.nifi.controller.swap.SwapDeserializer;
+import org.apache.nifi.controller.swap.SwapSerializer;
+import org.apache.nifi.events.EventReporter;
+import org.apache.nifi.reporting.Severity;
+import org.apache.nifi.stream.io.StreamUtils;
+import org.apache.nifi.util.NiFiProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -37,26 +60,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Pattern;
-
-import org.apache.nifi.controller.queue.FlowFileQueue;
-import org.apache.nifi.controller.repository.FlowFileRecord;
-import org.apache.nifi.controller.repository.FlowFileRepository;
-import org.apache.nifi.controller.repository.FlowFileSwapManager;
-import org.apache.nifi.controller.repository.SwapContents;
-import org.apache.nifi.controller.repository.SwapManagerInitializationContext;
-import org.apache.nifi.controller.repository.SwapSummary;
-import org.apache.nifi.controller.repository.claim.ResourceClaimManager;
-import org.apache.nifi.controller.swap.SchemaSwapDeserializer;
-import org.apache.nifi.controller.swap.SchemaSwapSerializer;
-import org.apache.nifi.controller.swap.SimpleSwapDeserializer;
-import org.apache.nifi.controller.swap.SwapDeserializer;
-import org.apache.nifi.controller.swap.SwapSerializer;
-import org.apache.nifi.events.EventReporter;
-import org.apache.nifi.reporting.Severity;
-import org.apache.nifi.stream.io.StreamUtils;
-import org.apache.nifi.util.NiFiProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -91,13 +94,16 @@ public class FileSystemSwapManager implements FlowFileSwapManager {
     }
 
     public FileSystemSwapManager(final NiFiProperties nifiProperties) {
-        final Path flowFileRepoPath = nifiProperties.getFlowFileRepositoryPath();
+        this(nifiProperties.getFlowFileRepositoryPath());
+    }
 
+    public FileSystemSwapManager(final Path flowFileRepoPath) {
         this.storageDirectory = flowFileRepoPath.resolve("swap").toFile();
         if (!storageDirectory.exists() && !storageDirectory.mkdirs()) {
             throw new RuntimeException("Cannot create Swap Storage directory " + storageDirectory.getAbsolutePath());
         }
     }
+
 
     @Override
     public synchronized void initialize(final SwapManagerInitializationContext initializationContext) {
@@ -143,6 +149,16 @@ public class FileSystemSwapManager implements FlowFileSwapManager {
     @Override
     public SwapContents swapIn(final String swapLocation, final FlowFileQueue flowFileQueue) throws IOException {
         final File swapFile = new File(swapLocation);
+
+        final boolean validLocation = flowFileRepository.isValidSwapLocationSuffix(swapFile.getName());
+        if (!validLocation) {
+            warn("Cannot swap in FlowFiles from location " + swapLocation + " because the FlowFile Repository does not know about this Swap Location. " +
+                "This file should be manually removed. This typically occurs when a Swap File is written but the FlowFile Repository is not updated yet to reflect this. " +
+                "This is generally not a cause for concern, but may be indicative of a failure to update the FlowFile Repository.");
+            final SwapSummary swapSummary = new StandardSwapSummary(new QueueSize(0, 0), 0L, Collections.emptyList());
+            return new StandardSwapContents(swapSummary, Collections.emptyList());
+        }
+
         final SwapContents swapContents = peek(swapLocation, flowFileQueue);
         flowFileRepository.swapFlowFilesIn(swapFile.getAbsolutePath(), swapContents.getFlowFiles(), flowFileQueue);
 
@@ -211,6 +227,12 @@ public class FileSystemSwapManager implements FlowFileSwapManager {
                 continue;
             }
 
+            final boolean validLocation = flowFileRepository.isValidSwapLocationSuffix(swapFile.getName());
+            if (!validLocation) {
+                logger.warn("Encountered unknown Swap File {}; will ignore this Swap File. This file should be cleaned up manually", swapFile);
+                continue;
+            }
+
             // split the filename by dashes. The old filenaming scheme was "<timestamp>-<randomuuid>.swap" but the new naming scheme is
             // "<timestamp>-<queue identifier>-<random uuid>.swap". If we have two dashes, then we can just check if the queue ID is equal
             // to the id of the queue given and if not we can just move on.
@@ -249,7 +271,7 @@ public class FileSystemSwapManager implements FlowFileSwapManager {
             }
         }
 
-        Collections.sort(swapLocations, new SwapFileComparator());
+        swapLocations.sort(new SwapFileComparator());
         return swapLocations;
     }
 
