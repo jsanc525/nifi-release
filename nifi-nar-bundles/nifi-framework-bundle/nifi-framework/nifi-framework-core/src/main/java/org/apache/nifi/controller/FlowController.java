@@ -750,6 +750,8 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
             // get all connections/queues and recover from swap files.
             final List<Connection> connections = flowManager.getRootGroup().findAllConnections();
 
+            flowFileRepository.loadFlowFiles(new StandardQueueProvider(this));
+
             long maxIdFromSwapFiles = -1L;
             if (flowFileRepository.isVolatile()) {
                 for (final Connection connection : connections) {
@@ -773,7 +775,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
                 }
             }
 
-            flowFileRepository.loadFlowFiles(new StandardQueueProvider(this), maxIdFromSwapFiles + 1);
+            flowFileRepository.updateMaxFlowFileIdentifier(maxIdFromSwapFiles + 1);
 
             // Begin expiring FlowFiles that are old
             final RepositoryContextFactory contextFactory = new RepositoryContextFactory(contentRepository, flowFileRepository,
