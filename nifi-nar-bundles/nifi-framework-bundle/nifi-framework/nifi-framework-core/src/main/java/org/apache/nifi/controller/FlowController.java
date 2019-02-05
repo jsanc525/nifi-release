@@ -792,6 +792,8 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             // get all connections/queues and recover from swap files.
             final List<Connection> connections = getGroup(getRootGroupId()).findAllConnections();
 
+            flowFileRepository.loadFlowFiles(new StandardQueueProvider(this));
+
             long maxIdFromSwapFiles = -1L;
             if (flowFileRepository.isVolatile()) {
                 for (final Connection connection : connections) {
@@ -815,7 +817,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
                 }
             }
 
-            flowFileRepository.loadFlowFiles(this, maxIdFromSwapFiles + 1);
+            flowFileRepository.updateMaxFlowFileIdentifier(maxIdFromSwapFiles + 1);
 
             // Begin expiring FlowFiles that are old
             final RepositoryContextFactory contextFactory = new RepositoryContextFactory(contentRepository, flowFileRepository,
