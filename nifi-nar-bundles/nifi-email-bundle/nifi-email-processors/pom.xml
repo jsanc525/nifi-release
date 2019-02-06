@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-email-bundle</artifactId>
-        <version>1.5.0</version>
+        <version>1.5.0.3.1.2.17-1</version>
     </parent>
 
     <artifactId>nifi-email-processors</artifactId>
