@@ -829,7 +829,7 @@ public class FingerprintFactory {
             }
         };
     }
-    
+
     private Comparator<Element> getElementTextComparator() {
         return new Comparator<Element>() {
             @Override
