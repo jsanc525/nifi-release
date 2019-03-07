@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-solr-bundle</artifactId>
-        <version>1.5.0</version>
+        <version>1.5.0.3.1.2.19-1</version>
     </parent>
 
     <artifactId>nifi-solr-processors</artifactId>
@@ -76,7 +76,7 @@
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-record-serialization-services</artifactId>
-            <version>1.5.0</version>
+            <version>1.5.0.3.1.2.19-1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
