@@ -77,6 +77,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -91,6 +92,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -103,6 +105,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.isNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anySet;
@@ -144,7 +147,7 @@ public class TestStandardProcessScheduler {
 
         reportingTask = new TestReportingTask();
         final ReportingInitializationContext config = new StandardReportingInitializationContext(UUID.randomUUID().toString(), "Test", SchedulingStrategy.TIMER_DRIVEN, "5 secs",
-                Mockito.mock(ComponentLog.class), null, KerberosConfig.NOT_CONFIGURED, null);
+            Mockito.mock(ComponentLog.class), null, KerberosConfig.NOT_CONFIGURED, null);
         reportingTask.initialize(config);
 
         final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(null, variableRegistry);
@@ -168,7 +171,7 @@ public class TestStandardProcessScheduler {
                 final String id = invocation.getArgumentAt(0, String.class);
                 return processorMap.get(id);
             }
-        }).when(flowManager).getProcessorNode(Mockito.anyString());
+        }).when(flowManager).getProcessorNode(anyString());
 
         Mockito.doAnswer(new Answer<Object>() {
             @Override
@@ -182,7 +185,7 @@ public class TestStandardProcessScheduler {
         when(controller.getControllerServiceProvider()).thenReturn(serviceProvider);
 
         rootGroup = new MockProcessGroup(controller);
-        when(flowManager.getGroup(Mockito.anyString())).thenReturn(rootGroup);
+        when(flowManager.getGroup(anyString())).thenReturn(rootGroup);
 
         when(controller.getReloadComponent()).thenReturn(Mockito.mock(ReloadComponent.class));
 
@@ -246,7 +249,7 @@ public class TestStandardProcessScheduler {
     }
 
     @Test(timeout = 60000)
-    public void testDisableControllerServiceWithProcessorTryingToStartUsingIt() throws InterruptedException {
+    public void testDisableControllerServiceWithProcessorTryingToStartUsingIt() throws InterruptedException, ExecutionException {
         final String uuid = UUID.randomUUID().toString();
         final Processor proc = new ServiceReferencingProcessor();
         proc.initialize(new StandardProcessorInitializationContext(uuid, null, null, null, KerberosConfig.NOT_CONFIGURED));
@@ -254,7 +257,7 @@ public class TestStandardProcessScheduler {
         final ReloadComponent reloadComponent = Mockito.mock(ReloadComponent.class);
 
         final ControllerServiceNode service = flowManager.createControllerService(NoStartServiceImpl.class.getName(), "service",
-                systemBundle.getBundleDetails().getCoordinate(), null, true, true);
+            systemBundle.getBundleDetails().getCoordinate(), null, true, true);
 
         rootGroup.addControllerService(service);
 
@@ -280,13 +283,8 @@ public class TestStandardProcessScheduler {
         scheduler.stopProcessor(procNode);
         assertTrue(service.isActive());
         assertSame(service.getState(), ControllerServiceState.ENABLING);
-        scheduler.disableControllerService(service);
-        assertSame(service.getState(), ControllerServiceState.DISABLING);
+        scheduler.disableControllerService(service).get();
         assertFalse(service.isActive());
-
-        while (service.getState() != ControllerServiceState.DISABLED) {
-            Thread.sleep(5L);
-        }
         assertSame(service.getState(), ControllerServiceState.DISABLED);
     }
 
@@ -314,10 +312,10 @@ public class TestStandardProcessScheduler {
     public static class ServiceReferencingProcessor extends AbstractProcessor {
 
         static final PropertyDescriptor SERVICE_DESC = new PropertyDescriptor.Builder()
-                .name("service")
-                .identifiesControllerService(NoStartService.class)
-                .required(true)
-                .build();
+            .name("service")
+            .identifiesControllerService(NoStartService.class)
+            .required(true)
+            .build();
 
         @Override
         protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
@@ -342,7 +340,7 @@ public class TestStandardProcessScheduler {
         final StandardProcessScheduler scheduler = createScheduler();
 
         final ControllerServiceNode serviceNode = flowManager.createControllerService(SimpleTestService.class.getName(),
-                "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+            "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
 
         serviceNode.performValidation();
 
@@ -356,7 +354,7 @@ public class TestStandardProcessScheduler {
                 @Override
                 public void run() {
                     try {
-                        scheduler.enableControllerService(serviceNode);
+                        scheduler.enableControllerService(serviceNode).get();
                         assertTrue(serviceNode.isActive());
                     } catch (final Exception e) {
                         e.printStackTrace();
@@ -384,7 +382,7 @@ public class TestStandardProcessScheduler {
         final StandardProcessScheduler scheduler = createScheduler();
 
         final ControllerServiceNode serviceNode = flowManager.createControllerService(SimpleTestService.class.getName(),
-                "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+            "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
         final SimpleTestService ts = (SimpleTestService) serviceNode.getControllerServiceImplementation();
         final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -420,7 +418,9 @@ public class TestStandardProcessScheduler {
     public void validateEnabledServiceCanOnlyBeDisabledOnce() throws Exception {
         final StandardProcessScheduler scheduler = createScheduler();
         final ControllerServiceNode serviceNode = flowManager.createControllerService(SimpleTestService.class.getName(),
-                "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+            "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+
+        assertSame(ValidationStatus.VALID, serviceNode.performValidation());
 
         final SimpleTestService ts = (SimpleTestService) serviceNode.getControllerServiceImplementation();
         scheduler.enableControllerService(serviceNode).get();
@@ -455,9 +455,16 @@ public class TestStandardProcessScheduler {
         final StandardProcessScheduler scheduler = createScheduler();
 
         final ControllerServiceNode serviceNode = flowManager.createControllerService(FailingService.class.getName(),
-                "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
-        scheduler.enableControllerService(serviceNode);
-        Thread.sleep(1000);
+            "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+        serviceNode.performValidation();
+
+        final Future<?> future = scheduler.enableControllerService(serviceNode);
+        try {
+            future.get();
+        } catch (final Exception e) {
+            // Expected behavior because the FailingService throws Exception when attempting to enable
+        }
+
         scheduler.shutdown();
 
         /*
@@ -490,7 +497,7 @@ public class TestStandardProcessScheduler {
         final ExecutorService executor = Executors.newCachedThreadPool();
         for (int i = 0; i < 200; i++) {
             final ControllerServiceNode serviceNode = flowManager.createControllerService(RandomShortDelayEnablingService.class.getName(), "1",
-                    systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+                systemBundle.getBundleDetails().getCoordinate(), null, false, true);
 
             executor.execute(new Runnable() {
                 @Override
@@ -531,7 +538,8 @@ public class TestStandardProcessScheduler {
         final StandardProcessScheduler scheduler = createScheduler();
 
         final ControllerServiceNode serviceNode = flowManager.createControllerService(LongEnablingService.class.getName(),
-                "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+            "1", systemBundle.getBundleDetails().getCoordinate(), null, false, true);
+
         final LongEnablingService ts = (LongEnablingService) serviceNode.getControllerServiceImplementation();
         ts.setLimit(Long.MAX_VALUE);
 
@@ -625,7 +633,9 @@ public class TestStandardProcessScheduler {
         procNode.performValidation();
         scheduler.startProcessor(procNode, true);
 
-        Thread.sleep(100L);
+        while(proc.getOnScheduledInvocationCount() < 1){
+            Thread.sleep(100L);
+        }
         assertEquals(1, proc.getOnScheduledInvocationCount());
         Thread.sleep(100L);
         assertEquals(1, proc.getOnScheduledInvocationCount());
