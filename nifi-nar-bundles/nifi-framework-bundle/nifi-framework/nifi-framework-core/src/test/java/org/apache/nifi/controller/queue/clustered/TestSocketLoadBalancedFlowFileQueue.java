@@ -117,7 +117,8 @@ public class TestSocketLoadBalancedFlowFileQueue {
         doAnswer(new Answer() {
             @Override
             public Object answer(final InvocationOnMock invocation) throws Throwable {
-                clusterTopologyEventListener = invocation.getArgumentAt(0, ClusterTopologyEventListener.class);
+                clusterTopologyEventListener = invocation.getArgumentAt(0, ClusterTopologyEventListener.class
+                );
                 return null;
             }
         }).when(clusterCoordinator).registerEventListener(Mockito.any(ClusterTopologyEventListener.class));
