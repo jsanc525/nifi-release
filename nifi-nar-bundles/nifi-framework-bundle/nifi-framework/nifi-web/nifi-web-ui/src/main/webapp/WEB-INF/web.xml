@@ -136,6 +136,16 @@
         <url-pattern>/login</url-pattern>
     </filter-mapping>
 
+    <!-- logout filter -->
+    <filter>
+        <filter-name>LogoutFilter</filter-name>
+        <filter-class>org.apache.nifi.web.filter.LogoutFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>LogoutFilter</filter-name>
+        <url-pattern>/logout</url-pattern>
+    </filter-mapping>
+
     <!-- catch all filter -->
     <filter>
         <filter-name>SanitizeContextPathFilter</filter-name>
