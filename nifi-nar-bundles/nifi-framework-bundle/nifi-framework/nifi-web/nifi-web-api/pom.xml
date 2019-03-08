@@ -177,6 +177,13 @@
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-web-security</artifactId>
+            <version>1.5.0</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-web-optimistic-locking</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -369,5 +376,11 @@
             <artifactId>spock-core</artifactId>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>2.3.1</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 </project>
