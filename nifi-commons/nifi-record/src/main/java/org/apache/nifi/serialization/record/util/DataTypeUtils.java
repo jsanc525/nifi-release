@@ -1013,15 +1013,11 @@ public class DataTypeUtils {
         if (value instanceof BigInteger) {
             return (BigInteger) value;
         }
-        if (value instanceof Long) {
-            return BigInteger.valueOf((Long) value);
+
+        if (value instanceof Number) {
+            return BigInteger.valueOf(((Number) value).longValue());
         }
-        if (value instanceof Integer) {
-            return BigInteger.valueOf(((Integer) value).longValue());
-        }
-        if (value instanceof Short) {
-            return BigInteger.valueOf(((Short) value).longValue());
-        }
+
         if (value instanceof String) {
             try {
                 return new BigInteger((String) value);
@@ -1035,11 +1031,7 @@ public class DataTypeUtils {
     }
 
     public static boolean isBigIntTypeCompatible(final Object value) {
-        return value instanceof BigInteger
-                || value instanceof Long
-                || value instanceof Integer
-                || value instanceof Short
-                || value instanceof String;
+        return isNumberTypeCompatible(value, DataTypeUtils::isIntegral);
     }
 
     public static Boolean toBoolean(final Object value, final String fieldName) {
@@ -1210,7 +1202,10 @@ public class DataTypeUtils {
         return false;
     }
 
-    private static boolean isIntegral(final String value, final long minValue, final long maxValue) {
+    /**
+     * Check if the value is an integral.
+     */
+    private static boolean isIntegral(final String value) {
         if (value == null || value.isEmpty()) {
             return false;
         }
@@ -1231,6 +1226,18 @@ public class DataTypeUtils {
             }
         }
 
+        return true;
+    }
+
+    /**
+     * Check if the value is an integral within a value range.
+     */
+    private static boolean isIntegral(final String value, final long minValue, final long maxValue) {
+
+        if (!isIntegral(value)) {
+            return false;
+        }
+
         try {
             final long longValue = Long.parseLong(value);
             return longValue >= minValue && longValue <= maxValue;
@@ -1239,7 +1246,6 @@ public class DataTypeUtils {
             return false;
         }
     }
-
 
     public static Integer toInteger(final Object value, final String fieldName) {
         if (value == null) {
