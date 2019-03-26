@@ -79,6 +79,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -190,7 +191,7 @@ public class TestStandardProcessSession {
 
         contentRepo = new MockContentRepository();
         contentRepo.initialize(new StandardResourceClaimManager());
-        flowFileRepo = new MockFlowFileRepository();
+        flowFileRepo = new MockFlowFileRepository(contentRepo);
 
         context = new RepositoryContext(connectable, new AtomicLong(0L), contentRepo, flowFileRepo, flowFileEventRepo, counterRepo, provenanceRepo);
         session = new StandardProcessSession(context, () -> false);
@@ -2049,6 +2050,11 @@ public class TestStandardProcessSession {
         private boolean failOnUpdate = false;
         private final AtomicLong idGenerator = new AtomicLong(0L);
         private final List<RepositoryRecord> updates = new ArrayList<>();
+        private final ContentRepository contentRepo;
+
+        public MockFlowFileRepository(final ContentRepository contentRepo) {
+            this.contentRepo = contentRepo;
+        }
 
         public void setFailOnUpdate(final boolean fail) {
             this.failOnUpdate = fail;
@@ -2074,6 +2080,16 @@ public class TestStandardProcessSession {
                 throw new IOException("FlowFile Repository told to fail on update for unit test");
             }
             updates.addAll(records);
+
+            for (final RepositoryRecord record : records) {
+                if (record.getType() == RepositoryRecordType.DELETE) {
+                    contentRepo.decrementClaimantCount(record.getCurrentClaim());
+                }
+
+                if (!Objects.equals(record.getOriginalClaim(), record.getCurrentClaim())) {
+                    contentRepo.decrementClaimantCount(record.getOriginalClaim());
+                }
+            }
         }
 
         public List<RepositoryRecord> getUpdates() {
