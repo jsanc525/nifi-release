@@ -1,5 +1,5 @@
 nifi-hive-nar
-Copyright 2014-2017 The Apache Software Foundation
+Copyright 2014-2019 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -16,6 +16,12 @@ This includes derived works from the Apache Hive (ASLv2 licensed) project (https
   The derived work is adapted from
     release-1.2.1/ql/src/java/org/apache/hadoop/hive/ql/io/orc/WriterImpl.java
   and can be found in the org.apache.hadoop.hive.ql.io.orc package
+  The derived work is adapted from
+      branch-3.0/streaming/src/java/org/apache/hive/streaming/StrictJsonWriter.java
+    and can be found in the org.apache.hive.streaming.HiveRecordWriter class
+  The derived work is adapted from
+      release-3.0.0/serde/src/java/org/apache/hadoop/hive/serde2/JsonSerDe.java
+    and can be found in the org.apache.hive.streaming.NiFiRecordSerDe class
 
 ===========================================
 Apache Software License v2
