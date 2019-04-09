@@ -49,7 +49,7 @@ public class TestInvokeHttpSSL extends TestInvokeHttpCommon {
         // create the SSL properties, which basically store keystore / trustore information
         // this is used by the StandardSSLContextService and the Jetty Server
         serverSslProperties = createServerSslProperties(false);
-        sslProperties = createSslProperties(false);
+        sslProperties = createClientSslProperties(false);
 
         // create a Jetty server on a random port
         server = createServer();
@@ -113,7 +113,7 @@ public class TestInvokeHttpSSL extends TestInvokeHttpCommon {
     }
 
 
-    protected static Map<String, String> createSslProperties(boolean clientAuth) {
+    protected static Map<String, String> createClientSslProperties(boolean clientAuth) {
         final Map<String, String> map = new HashMap<>();
         // if requesting client auth then we must provide a keystore
         if (clientAuth) {
