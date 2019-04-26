@@ -63,7 +63,7 @@ public class KerberosProvider implements LoginIdentityProvider {
         }
 
         try {
-            expiration = Double.valueOf(FormatUtils.getPreciseTimeDuration(rawExpiration, TimeUnit.MILLISECONDS)).longValue();
+            expiration = Double.valueOf(FormatUtils.getTimeDuration(rawExpiration, TimeUnit.MILLISECONDS)).longValue();
         } catch (final IllegalArgumentException iae) {
             throw new ProviderCreationException(String.format("The Expiration Duration '%s' is not a valid time duration", rawExpiration));
         }
