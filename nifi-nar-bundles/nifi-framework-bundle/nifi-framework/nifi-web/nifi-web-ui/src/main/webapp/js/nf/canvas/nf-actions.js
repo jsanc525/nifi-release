@@ -907,9 +907,7 @@
          * Reloads the status for the entire canvas (components and flow.)
          */
         reload: function () {
-            nfCanvasUtils.reload({
-                'transition': true
-            });
+            nfCanvasUtils.reload();
         },
 
         /**
