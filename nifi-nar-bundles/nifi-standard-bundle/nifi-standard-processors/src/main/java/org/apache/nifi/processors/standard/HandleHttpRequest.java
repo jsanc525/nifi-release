@@ -385,7 +385,7 @@ public class HandleHttpRequest extends AbstractProcessor {
                 if (!allowedMethods.contains(request.getMethod().toUpperCase())) {
                     getLogger().info("Sending back METHOD_NOT_ALLOWED response to {}; method was {}; request URI was {}",
                             new Object[]{request.getRemoteAddr(), request.getMethod(), requestUri});
-                    response.sendError(Status.METHOD_NOT_ALLOWED.getStatusCode());
+                    response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                     return;
                 }
 
@@ -398,34 +398,39 @@ public class HandleHttpRequest extends AbstractProcessor {
                     }
 
                     if (!pathPattern.matcher(uri.getPath()).matches()) {
-                        response.sendError(Status.NOT_FOUND.getStatusCode());
                         getLogger().info("Sending back NOT_FOUND response to {}; request was {} {}",
                                 new Object[]{request.getRemoteAddr(), request.getMethod(), requestUri});
+                        response.sendError(HttpServletResponse.SC_NOT_FOUND);
                         return;
                     }
                 }
 
                 // If destination queues full, send back a 503: Service Unavailable.
                 if (context.getAvailableRelationships().isEmpty()) {
-                    response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                    getLogger().warn("Request from {} cannot be processed, processor downstream queue is full; responding with SERVICE_UNAVAILABLE",
+                            new Object[]{request.getRemoteAddr()});
+
+                    response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Processor queue is full");
                     return;
                 }
 
                 // Right now, that information, though, is only in the ProcessSession, not the ProcessContext,
                 // so it is not known to us. Should see if it can be added to the ProcessContext.
                 final AsyncContext async = baseRequest.startAsync();
-                async.setTimeout(requestTimeout);
+
+                // disable timeout handling on AsyncContext, timeout will be handled in HttpContextMap
+                async.setTimeout(0);
+
                 final boolean added = containerQueue.offer(new HttpRequestContainer(request, response, async));
 
                 if (added) {
                     getLogger().debug("Added Http Request to queue for {} {} from {}",
                             new Object[]{request.getMethod(), requestUri, request.getRemoteAddr()});
                 } else {
-                    getLogger().info("Sending back a SERVICE_UNAVAILABLE response to {}; request was {} {}",
-                            new Object[]{request.getRemoteAddr(), request.getMethod(), request.getRemoteAddr()});
+                    getLogger().warn("Request from {} cannot be processed, container queue is full; responding with SERVICE_UNAVAILABLE",
+                            new Object[]{request.getRemoteAddr()});
 
-                    response.sendError(Status.SERVICE_UNAVAILABLE.getStatusCode());
-                    response.flushBuffer();
+                    response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Container queue is full");
                     async.complete();
                 }
             }
@@ -658,14 +663,13 @@ public class HandleHttpRequest extends AbstractProcessor {
             getLogger().warn("Received request from {} but could not process it because too many requests are already outstanding; responding with SERVICE_UNAVAILABLE",
                     new Object[]{request.getRemoteAddr()});
 
-            try {
-                container.getResponse().setStatus(Status.SERVICE_UNAVAILABLE.getStatusCode());
-                container.getResponse().flushBuffer();
-                container.getContext().complete();
-            } catch (final Exception e) {
-                getLogger().warn("Failed to respond with SERVICE_UNAVAILABLE message to {} due to {}",
-                        new Object[]{request.getRemoteAddr(), e});
-            }
+        try {
+          container.getResponse().sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "HttpContextMap is full");
+          container.getContext().complete();
+        } catch (final Exception e) {
+          getLogger().warn("Failed to respond with SERVICE_UNAVAILABLE message to {} due to {}",
+              new Object[]{request.getRemoteAddr(), e});
+        }
 
             session.remove(flowFile);
             return;
