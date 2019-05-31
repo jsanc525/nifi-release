@@ -83,8 +83,8 @@ public class StandardControllerServiceNode extends AbstractComponentNode impleme
     private final Lock writeLock = rwLock.writeLock();
 
     private final Set<ComponentNode> referencingComponents = new HashSet<>();
-    private String comment;
-    private ProcessGroup processGroup;
+    private volatile String comment;
+    private volatile ProcessGroup processGroup;
 
     private final AtomicBoolean active;
 
@@ -208,24 +208,14 @@ public class StandardControllerServiceNode extends AbstractComponentNode impleme
 
     @Override
     public ProcessGroup getProcessGroup() {
-        readLock.lock();
-        try {
-            return processGroup;
-        } finally {
-            readLock.unlock();
-        }
+        return processGroup;
     }
 
     @Override
     public void setProcessGroup(final ProcessGroup group) {
-        writeLock.lock();
-        try {
-            this.processGroup = group;
-            LOG.debug("Resetting Validation State of {} due to setting process group", this);
-            resetValidationState();
-        } finally {
-            writeLock.unlock();
-        }
+        this.processGroup = group;
+        LOG.debug("Resetting Validation State of {} due to setting process group", this);
+        resetValidationState();
     }
 
     @Override
@@ -340,22 +330,12 @@ public class StandardControllerServiceNode extends AbstractComponentNode impleme
 
     @Override
     public String getComments() {
-        readLock.lock();
-        try {
-            return comment;
-        } finally {
-            readLock.unlock();
-        }
+        return comment;
     }
 
     @Override
     public void setComments(final String comment) {
-        writeLock.lock();
-        try {
-            this.comment = CharacterFilterUtils.filterInvalidXmlCharacters(comment);
-        } finally {
-            writeLock.unlock();
-        }
+        this.comment = CharacterFilterUtils.filterInvalidXmlCharacters(comment);
     }
 
     @Override
