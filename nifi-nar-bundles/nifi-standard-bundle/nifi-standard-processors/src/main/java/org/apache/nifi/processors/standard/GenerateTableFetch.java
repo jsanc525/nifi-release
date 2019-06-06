@@ -251,7 +251,7 @@ public class GenerateTableFetch extends AbstractDatabaseFetchProcessor {
         final boolean useColumnValsForPaging = !StringUtils.isEmpty(columnForPartitioning);
         final String customWhereClause = context.getProperty(WHERE_CLAUSE).evaluateAttributeExpressions(fileToProcess).getValue();
         final String customOrderByColumn = context.getProperty(CUSTOM_ORDERBY_COLUMN).evaluateAttributeExpressions(fileToProcess).getValue();
-        
+
         final StateManager stateManager = context.getStateManager();
         final StateMap stateMap;
         FlowFile finalFileToProcess = fileToProcess;
@@ -451,10 +451,11 @@ public class GenerateTableFetch extends AbstractDatabaseFetchProcessor {
                     whereClause = maxValueClauses.isEmpty() ? "1=1" : StringUtils.join(maxValueClauses, " AND ");
 
                     Long offset = partitionSize == 0 ? null : i * partitionSize + (useColumnValsForPaging ? minValueForPartitioning : 0);
+
+                    final String maxColumnNames = StringUtils.join(maxValueColumnNameList, ", ");
                     // Don't use an ORDER BY clause if there's only one partition
                     final String orderByClause = partitionSize == 0 ? null : (maxColumnNames.isEmpty() ? customOrderByColumn : maxColumnNames);
 
-                    final String maxColumnNames = StringUtils.join(maxValueColumnNameList, ", ");
                     final String query = dbAdapter.getSelectStatement(tableName, columnNames, whereClause, orderByClause, limit, offset, columnForPartitioning);
                     FlowFile sqlFlowFile = (fileToProcess == null) ? session.create() : session.create(fileToProcess);
                     sqlFlowFile = session.write(sqlFlowFile, out -> out.write(query.getBytes()));

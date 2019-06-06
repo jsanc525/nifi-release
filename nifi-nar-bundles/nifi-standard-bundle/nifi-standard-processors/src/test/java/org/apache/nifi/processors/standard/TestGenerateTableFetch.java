@@ -1578,8 +1578,6 @@ public class TestGenerateTableFetch {
         MockFlowFile flowFile = runner.getFlowFilesForRelationship(REL_SUCCESS).get(0);
         String query = new String(flowFile.toByteArray());
         assertEquals("SELECT * FROM TEST_QUERY_DB_TABLE WHERE 1=1 ORDER BY SCALE FETCH NEXT 2 ROWS ONLY", query);
-        flowFile.assertAttributeEquals(FRAGMENT_INDEX, "0");
-        flowFile.assertAttributeEquals(FRAGMENT_COUNT, "2");
         ResultSet resultSet = stmt.executeQuery(query);
         // Should be two records
         assertTrue(resultSet.next());
@@ -1589,8 +1587,6 @@ public class TestGenerateTableFetch {
         flowFile = runner.getFlowFilesForRelationship(REL_SUCCESS).get(1);
         query = new String(flowFile.toByteArray());
         assertEquals("SELECT * FROM TEST_QUERY_DB_TABLE WHERE 1=1 ORDER BY SCALE OFFSET 2 ROWS FETCH NEXT 2 ROWS ONLY", query);
-        flowFile.assertAttributeEquals(FRAGMENT_INDEX, "1");
-        flowFile.assertAttributeEquals(FRAGMENT_COUNT, "2");
         resultSet = stmt.executeQuery(query);
         // Should be one record
         assertTrue(resultSet.next());
