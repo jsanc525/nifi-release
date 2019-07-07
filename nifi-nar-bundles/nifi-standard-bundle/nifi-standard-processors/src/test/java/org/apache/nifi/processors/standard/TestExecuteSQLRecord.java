@@ -227,6 +227,11 @@ public class TestExecuteSQLRecord {
             stmt.execute("insert into TEST_NULL_INT (id, val1, val2) VALUES (" + i + ", 1, 1)");
         }
 
+        Map<String, String> attrMap = new HashMap<>();
+        String testAttrName = "attr1";
+        String testAttrValue = "value1";
+        attrMap.put(testAttrName, testAttrValue);
+
         MockRecordWriter recordWriter = new MockRecordWriter(null, true, -1);
         runner.addControllerService("writer", recordWriter);
         runner.setProperty(ExecuteSQLRecord.RECORD_WRITER_FACTORY, "writer");
@@ -235,7 +240,7 @@ public class TestExecuteSQLRecord {
         runner.setIncomingConnection(true);
         runner.setProperty(ExecuteSQLRecord.MAX_ROWS_PER_FLOW_FILE, "5");
         runner.setProperty(ExecuteSQLRecord.OUTPUT_BATCH_SIZE, "1");
-        runner.enqueue("SELECT * FROM TEST_NULL_INT");
+        MockFlowFile inputFlowFile = runner.enqueue("SELECT * FROM TEST_NULL_INT", attrMap);
         runner.run();
 
         runner.assertAllFlowFilesTransferred(ExecuteSQLRecord.REL_SUCCESS, 200);
@@ -254,6 +259,8 @@ public class TestExecuteSQLRecord {
         lastFlowFile.assertAttributeEquals(ExecuteSQLRecord.RESULT_ROW_COUNT, "5");
         lastFlowFile.assertAttributeEquals(FragmentAttributes.FRAGMENT_INDEX.key(), "199");
         lastFlowFile.assertAttributeEquals(ExecuteSQLRecord.RESULTSET_INDEX, "0");
+        lastFlowFile.assertAttributeEquals(testAttrName, testAttrValue);
+        lastFlowFile.assertAttributeEquals(AbstractExecuteSQL.INPUT_FLOWFILE_UUID, inputFlowFile.getAttribute(CoreAttributes.UUID.key()));
     }
 
     @Test
