@@ -221,19 +221,19 @@ public class CSVUtils {
         }
 
         final PropertyValue quoteValue = context.getProperty(QUOTE_MODE);
-        if (quoteValue != null) {
+        if (quoteValue != null && quoteValue.isSet()) {
             final QuoteMode quoteMode = QuoteMode.valueOf(quoteValue.getValue());
             format = format.withQuoteMode(quoteMode);
         }
 
         final PropertyValue trailingDelimiterValue = context.getProperty(TRAILING_DELIMITER);
-        if (trailingDelimiterValue != null) {
+        if (trailingDelimiterValue != null && trailingDelimiterValue.isSet()) {
             final boolean trailingDelimiter = trailingDelimiterValue.asBoolean();
             format = format.withTrailingDelimiter(trailingDelimiter);
         }
 
         final PropertyValue recordSeparator = context.getProperty(RECORD_SEPARATOR);
-        if (recordSeparator != null) {
+        if (recordSeparator != null && recordSeparator.isSet()) {
             final String separator = unescape(recordSeparator.getValue());
             format = format.withRecordSeparator(separator);
         }
