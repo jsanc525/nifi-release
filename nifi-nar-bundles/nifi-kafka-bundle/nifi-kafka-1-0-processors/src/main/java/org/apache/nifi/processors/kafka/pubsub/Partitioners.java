@@ -59,4 +59,41 @@ final public class Partitioners {
             return index++;
         }
     }
+
+    public static class RecordPathPartitioner implements Partitioner {
+        @Override
+        public int partition(final String topic, final Object key, final byte[] keyBytes, final Object value, final byte[] valueBytes, final Cluster cluster) {
+            // When this partitioner is used, it is always overridden by creating the ProducerRecord with the Partition directly specified. However, we must have a unique value
+            // to set in the Producer's config, so this class exists
+            return 0;
+        }
+
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public void configure(final Map<String, ?> configs) {
+        }
+    }
+
+
+    public static class ExpressionLanguagePartitioner implements Partitioner {
+        @Override
+        public int partition(final String topic, final Object key, final byte[] keyBytes, final Object value, final byte[] valueBytes, final Cluster cluster) {
+            // When this partitioner is used, it is always overridden by creating the ProducerRecord with the Partition directly specified. However, we must have a unique value
+            // to set in the Producer's config, so this class exists
+            return 0;
+        }
+
+        @Override
+        public void close() {
+        }
+
+        @Override
+        public void configure(final Map<String, ?> configs) {
+        }
+    }
+
+
 }
