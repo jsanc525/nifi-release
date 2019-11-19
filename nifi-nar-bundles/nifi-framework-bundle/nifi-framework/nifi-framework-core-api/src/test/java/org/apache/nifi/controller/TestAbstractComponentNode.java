@@ -17,16 +17,8 @@
 
 package org.apache.nifi.controller;
 
-import static org.junit.Assert.assertEquals;
-
-import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.nifi.authorization.Resource;
+import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.authorization.resource.Authorizable;
 import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.components.ConfigurableComponent;
@@ -35,10 +27,18 @@ import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.components.validation.ValidationStatus;
 import org.apache.nifi.components.validation.ValidationTrigger;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
-import org.apache.nifi.nar.StandardExtensionDiscoveringManager;
 import org.apache.nifi.registry.ComponentVariableRegistry;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestAbstractComponentNode {
 
@@ -86,7 +86,7 @@ public class TestAbstractComponentNode {
         public ValidationControlledAbstractComponentNode(final long pauseMillis, final ValidationTrigger validationTrigger) {
             super("id", Mockito.mock(ValidationContextFactory.class), Mockito.mock(ControllerServiceProvider.class), "unit test component",
                 ValidationControlledAbstractComponentNode.class.getCanonicalName(), Mockito.mock(ComponentVariableRegistry.class), Mockito.mock(ReloadComponent.class),
-                Mockito.mock(StandardExtensionDiscoveringManager.class), validationTrigger, false);
+                Mockito.mock(ExtensionManager.class), validationTrigger, false);
 
             this.pauseMillis = pauseMillis;
         }

@@ -30,7 +30,11 @@ import java.io.File;
 public final class SystemBundle {
 
     public static final BundleCoordinate SYSTEM_BUNDLE_COORDINATE = new BundleCoordinate(
-            BundleCoordinate.DEFAULT_GROUP, "system", BundleCoordinate.DEFAULT_VERSION);
+        BundleCoordinate.DEFAULT_GROUP, "system", BundleCoordinate.DEFAULT_VERSION);
+
+    public static Bundle create(final NiFiProperties niFiProperties) {
+        return create(niFiProperties, ClassLoader.getSystemClassLoader());
+    }
 
     /**
      * Returns a bundle representing the system class loader.
@@ -39,18 +43,16 @@ public final class SystemBundle {
      *                       which will become the working directory of the returned bundle
      * @return a bundle for the system class loader
      */
-    public static Bundle create(final NiFiProperties niFiProperties) {
-        final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
-
+    public static Bundle create(final NiFiProperties niFiProperties, final ClassLoader systemClassLoader) {
         final String narLibraryDirectory = niFiProperties.getProperty(NiFiProperties.NAR_LIBRARY_DIRECTORY);
         if (StringUtils.isBlank(narLibraryDirectory)) {
             throw new IllegalStateException("Unable to create system bundle because " + NiFiProperties.NAR_LIBRARY_DIRECTORY + " was null or empty");
         }
 
         final BundleDetails systemBundleDetails = new BundleDetails.Builder()
-                .workingDir(new File(narLibraryDirectory))
-                .coordinate(SYSTEM_BUNDLE_COORDINATE)
-                .build();
+            .workingDir(new File(narLibraryDirectory))
+            .coordinate(SYSTEM_BUNDLE_COORDINATE)
+            .build();
 
         return new Bundle(systemBundleDetails, systemClassLoader);
     }
