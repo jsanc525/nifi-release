@@ -81,7 +81,7 @@
                                         <title>NiFi Rest Api</title>
                                         <version>${project.version}</version>
                                         <description>
-                                            The Rest Api provides programmatic access to command and control a NiFi instance in real time. Start and 
+                                            The Rest Api provides programmatic access to command and control a NiFi instance in real time. Start and
                                             stop processors, monitor queues, query provenance data, and more. Each endpoint below includes a description,
                                             definitions of the expected input and output, potential response codes, and the authorizations required
                                             to invoke each service.
@@ -115,12 +115,12 @@
                         </goals>
                         <configuration>
                             <outputDirectory>${project.build.directory}/${project.artifactId}-${project.version}/docs/rest-api/images</outputDirectory>
-                            <resources>          
+                            <resources>
                                 <resource>
                                     <directory>src/main/resources/images</directory>
                                 </resource>
-                            </resources>              
-                        </configuration>            
+                            </resources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -178,7 +178,7 @@
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-web-security</artifactId>
-            <version>1.10.0-SNAPSHOT</version>
+            <version>1.9.0</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
