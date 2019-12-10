@@ -2251,7 +2251,14 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             throw new FlowFileAccessException("Failed to access ContentClaim for " + source.toString(), e);
         }
 
-        final InputStream rawIn = getInputStream(source, record.getCurrentClaim(), record.getCurrentClaimOffset(), true);
+        final InputStream rawIn;
+        try {
+            rawIn = getInputStream(source, record.getCurrentClaim(), record.getCurrentClaimOffset(), true);
+        } catch (final ContentNotFoundException nfe) {
+            handleContentNotFound(nfe, record);
+            throw nfe;
+        }
+
         final InputStream limitedIn = new LimitedInputStream(rawIn, source.getSize());
         final ByteCountingInputStream countingStream = new ByteCountingInputStream(limitedIn);
         final FlowFileAccessInputStream ffais = new FlowFileAccessInputStream(countingStream, source, record.getCurrentClaim());
@@ -2265,13 +2272,13 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
                 try {
                     return ffais.read();
                 } catch (final ContentNotFoundException cnfe) {
-                    handleContentNotFound(cnfe, record);
                     close();
+                    handleContentNotFound(cnfe, record);
                     throw cnfe;
                 } catch (final FlowFileAccessException ffae) {
                     LOG.error("Failed to read content from " + sourceFlowFile + "; rolling back session", ffae);
-                    rollback(true);
                     close();
+                    rollback(true);
                     throw ffae;
                 }
             }
@@ -2286,13 +2293,13 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
                 try {
                     return ffais.read(b, off, len);
                 } catch (final ContentNotFoundException cnfe) {
-                    handleContentNotFound(cnfe, record);
                     close();
+                    handleContentNotFound(cnfe, record);
                     throw cnfe;
                 } catch (final FlowFileAccessException ffae) {
                     LOG.error("Failed to read content from " + sourceFlowFile + "; rolling back session", ffae);
-                    rollback(true);
                     close();
+                    rollback(true);
                     throw ffae;
                 }
             }
