@@ -17,6 +17,7 @@
 
 package org.apache.nifi.processors.kafka.pubsub;
 
+import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processors.kafka.pubsub.util.MockRecordParser;
@@ -32,6 +33,8 @@ import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,6 +50,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -139,6 +143,24 @@ public class TestPublishKafkaRecord_2_0 {
 
         verify(mockLease, times(1)).publish(any(FlowFile.class), any(RecordSet.class), any(RecordSetWriterFactory.class), any(RecordSchema.class), eq(null), eq(TOPIC_NAME));
         verify(mockLease, times(1)).complete();
+        verify(mockLease, times(1)).close();
+    }
+
+    @Test
+    public void testFailureWhenCreationgTransaction() {
+        runner.enqueue("John Doe, 48");
+
+        doAnswer(new Answer<Object>() {
+            @Override
+            public Object answer(final InvocationOnMock invocationOnMock) {
+                throw new ProducerFencedException("Intentional ProducedFencedException for unit test");
+            }
+        }).when(mockLease).beginTransaction();
+
+        runner.run();
+        runner.assertAllFlowFilesTransferred(PublishKafkaRecord_2_0.REL_FAILURE, 1);
+
+        verify(mockLease, times(1)).poison();
         verify(mockLease, times(1)).close();
     }
 
