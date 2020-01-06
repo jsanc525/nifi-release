@@ -88,13 +88,18 @@ public class PublisherLease implements Closeable {
             return;
         }
 
-        if (!transactionsInitialized) {
-            producer.initTransactions();
-            transactionsInitialized = true;
-        }
+        try {
+            if (!transactionsInitialized) {
+                producer.initTransactions();
+                transactionsInitialized = true;
+            }
 
-        producer.beginTransaction();
-        activeTransaction = true;
+            producer.beginTransaction();
+            activeTransaction = true;
+        } catch (final Exception e) {
+            poison();
+            throw e;
+        }
     }
 
     void rollback() {
@@ -102,7 +107,13 @@ public class PublisherLease implements Closeable {
             return;
         }
 
-        producer.abortTransaction();
+        try {
+            producer.abortTransaction();
+        } catch (final Exception e) {
+            poison();
+            throw e;
+        }
+
         activeTransaction = false;
     }
 
@@ -254,11 +265,16 @@ public class PublisherLease implements Closeable {
             throw new IllegalStateException("Cannot complete publishing to Kafka because Publisher Lease was already closed");
         }
 
-        producer.flush();
+        try {
+            producer.flush();
 
-        if (activeTransaction) {
-            producer.commitTransaction();
-            activeTransaction = false;
+            if (activeTransaction) {
+                producer.commitTransaction();
+                activeTransaction = false;
+            }
+        } catch (final Exception e) {
+            poison();
+            throw e;
         }
 
         try {
