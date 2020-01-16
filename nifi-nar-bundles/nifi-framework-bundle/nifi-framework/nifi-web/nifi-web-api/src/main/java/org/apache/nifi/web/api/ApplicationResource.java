@@ -112,7 +112,7 @@ public abstract class ApplicationResource {
     public static final String NODEWISE = "false";
 
     @Context
-    private HttpServletRequest httpServletRequest;
+    protected HttpServletRequest httpServletRequest;
 
     @Context
     private UriInfo uriInfo;

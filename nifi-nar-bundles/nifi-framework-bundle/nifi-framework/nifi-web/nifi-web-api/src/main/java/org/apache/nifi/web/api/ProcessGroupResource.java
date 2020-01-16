@@ -24,6 +24,37 @@ import com.wordnik.swagger.annotations.ApiParam;
 import com.wordnik.swagger.annotations.ApiResponse;
 import com.wordnik.swagger.annotations.ApiResponses;
 import com.wordnik.swagger.annotations.Authorization;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.GET;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.stream.StreamSource;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.authorization.AuthorizableLookup;
 import org.apache.nifi.authorization.AuthorizeControllerServiceReference;
@@ -81,37 +112,6 @@ import org.apache.nifi.web.api.request.ClientIdParameter;
 import org.apache.nifi.web.api.request.LongParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.transform.stream.StreamSource;
-import java.io.InputStream;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 /**
  * RESTful endpoint for managing a Group.
@@ -2141,6 +2141,7 @@ public class ProcessGroupResource extends ApplicationResource {
         // unmarshal the template
         final TemplateDTO template;
         try {
+            // TODO: Potentially refactor the template parsing to a service layer outside of the resource for web request handling
             JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
             Unmarshaller unmarshaller = context.createUnmarshaller();
             JAXBElement<TemplateDTO> templateElement = unmarshaller.unmarshal(new StreamSource(in), TemplateDTO.class);
@@ -2151,12 +2152,12 @@ public class ProcessGroupResource extends ApplicationResource {
             return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
         } catch (IllegalArgumentException iae) {
             logger.warn("Unable to import template.", iae);
-            String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), iae.getMessage());
+            String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), sanitizeErrorResponse(iae.getMessage()));
             return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
         } catch (Exception e) {
             logger.warn("An error occurred while importing a template.", e);
             String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"Unable to import the specified template: %s\"/>",
-                    Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e.getMessage());
+                    Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), sanitizeErrorResponse(e.getMessage()));
             return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
         }
 
@@ -2186,6 +2187,20 @@ public class ProcessGroupResource extends ApplicationResource {
 
         // otherwise import the template locally
         return importTemplate(httpServletRequest, groupId, entity);
+    }
+
+    /**
+     * Returns the sanitized error response which can safely be displayed on the error page.
+     *
+     * @param errorResponse the initial error response
+     * @return the HTML-escaped error response
+     */
+    private String sanitizeErrorResponse(String errorResponse) {
+        if (errorResponse == null || StringUtils.isEmpty(errorResponse)) {
+            return "";
+        }
+
+        return StringEscapeUtils.escapeHtml4(errorResponse);
     }
 
     /**
@@ -2254,12 +2269,12 @@ public class ProcessGroupResource extends ApplicationResource {
                         return clusterContext(generateCreatedResponse(URI.create(template.getUri()), entity)).build();
                     } catch (IllegalArgumentException | IllegalStateException e) {
                         logger.info("Unable to import template: " + e);
-                        String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+                        String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), sanitizeErrorResponse(e.getMessage()));
                         return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
                     } catch (Exception e) {
                         logger.warn("An error occurred while importing a template.", e);
                         String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"Unable to import the specified template: %s\"/>",
-                                Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e.getMessage());
+                                Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), sanitizeErrorResponse(e.getMessage()));
                         return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
                     }
                 }
