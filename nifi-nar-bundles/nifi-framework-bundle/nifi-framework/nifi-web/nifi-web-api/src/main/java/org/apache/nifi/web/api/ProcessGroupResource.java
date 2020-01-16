@@ -25,6 +25,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Authorization;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.nifi.authorization.AuthorizableLookup;
 import org.apache.nifi.authorization.AuthorizeAccess;
 import org.apache.nifi.authorization.AuthorizeControllerServiceReference;
@@ -1004,18 +1005,10 @@ public class ProcessGroupResource extends ApplicationResource {
                         return false;
                     }
 
-                    if (desiredState == ScheduledState.STOPPED && status.getAggregateSnapshot().getActiveThreadCount() != 0) {
-                        return false;
-                    }
-
-                    return true;
+                    return desiredState != ScheduledState.STOPPED || status.getAggregateSnapshot().getActiveThreadCount() == 0;
                 });
 
-        if (!allProcessorsMatch) {
-            return false;
-        }
-
-        return true;
+        return allProcessorsMatch;
     }
 
     /**
@@ -3445,6 +3438,7 @@ public class ProcessGroupResource extends ApplicationResource {
         // unmarshal the template
         final TemplateDTO template;
         try {
+            // TODO: Potentially refactor the template parsing to a service layer outside of the resource for web request handling
             JAXBContext context = JAXBContext.newInstance(TemplateDTO.class);
             Unmarshaller unmarshaller = context.createUnmarshaller();
             XMLStreamReader xsr = XmlUtils.createSafeReader(in);
@@ -3456,12 +3450,12 @@ public class ProcessGroupResource extends ApplicationResource {
             return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
         } catch (IllegalArgumentException iae) {
             logger.warn("Unable to import template.", iae);
-            String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), iae.getMessage());
+            String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), sanitizeErrorResponse(iae.getMessage()));
             return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
         } catch (Exception e) {
             logger.warn("An error occurred while importing a template.", e);
             String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"Unable to import the specified template: %s\"/>",
-                    Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e.getMessage());
+                    Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), sanitizeErrorResponse(e.getMessage()));
             return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
         }
 
@@ -3495,6 +3489,20 @@ public class ProcessGroupResource extends ApplicationResource {
 
         // otherwise import the template locally
         return importTemplate(httpServletRequest, groupId, entity);
+    }
+
+    /**
+     * Returns the sanitized error response which can safely be displayed on the error page.
+     *
+     * @param errorResponse the initial error response
+     * @return the HTML-escaped error response
+     */
+    private String sanitizeErrorResponse(String errorResponse) {
+        if (errorResponse == null || StringUtils.isEmpty(errorResponse)) {
+            return "";
+        }
+
+        return StringEscapeUtils.escapeHtml4(errorResponse);
     }
 
     /**
@@ -3565,12 +3573,12 @@ public class ProcessGroupResource extends ApplicationResource {
                         return generateCreatedResponse(URI.create(template.getUri()), entity).build();
                     } catch (IllegalArgumentException | IllegalStateException e) {
                         logger.info("Unable to import template: " + e);
-                        String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), e.getMessage());
+                        String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"%s\"/>", Response.Status.BAD_REQUEST.getStatusCode(), sanitizeErrorResponse(e.getMessage()));
                         return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
                     } catch (Exception e) {
                         logger.warn("An error occurred while importing a template.", e);
                         String responseXml = String.format("<errorResponse status=\"%s\" statusText=\"Unable to import the specified template: %s\"/>",
-                                Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e.getMessage());
+                                Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), sanitizeErrorResponse(e.getMessage()));
                         return Response.status(Response.Status.OK).entity(responseXml).type("application/xml").build();
                     }
                 }
