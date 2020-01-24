@@ -330,6 +330,11 @@
             <artifactId>oauth2-oidc-sdk</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.4</version>
+        </dependency>
 
         <!-- testing dependencies -->
         <dependency>
