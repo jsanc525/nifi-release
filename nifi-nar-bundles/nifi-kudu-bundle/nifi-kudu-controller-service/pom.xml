@@ -119,6 +119,7 @@
             <activation>
                 <os>
                     <family>Unix</family>
+                    <arch>x86_64</arch>
                 </os>
             </activation>
             <dependencies>
@@ -130,6 +131,19 @@
                     <scope>test</scope>
                 </dependency>
             </dependencies>
+        </profile>
+        <profile>
+            <id>kudu-linux-not-x86_64</id>
+            <activation>
+                <os>
+                    <family>Unix</family>
+                    <arch>!x86_64</arch>
+                </os>
+            </activation>
+            <properties>
+                <!-- Kudu tests only support x86_64 flavor for Unix systems. -->
+                <exclude.tests>**/*.java</exclude.tests>
+            </properties>
         </profile>
         <profile>
             <id>kudu-mac</id>
