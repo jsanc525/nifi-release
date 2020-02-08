@@ -92,7 +92,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <inceptionYear>2014</inceptionYear>
         <org.slf4j.version>1.7.25</org.slf4j.version>
-        <jetty.version>9.4.3.v20170317</jetty.version>
+        <jetty.version>9.3.28.v20191105</jetty.version>
         <lucene.version>4.10.4</lucene.version>
         <spring.version>4.3.10.RELEASE</spring.version>
         <spring.security.version>4.2.4.RELEASE</spring.security.version>
