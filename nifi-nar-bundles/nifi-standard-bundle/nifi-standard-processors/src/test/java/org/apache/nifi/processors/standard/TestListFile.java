@@ -56,6 +56,7 @@ import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.Description;
@@ -228,6 +229,7 @@ public class TestListFile {
     }
 
     @Test
+    @Ignore
     public void testFilterAge() throws Exception {
 
         final File file1 = new File(TESTDIR + "/age1.txt");
