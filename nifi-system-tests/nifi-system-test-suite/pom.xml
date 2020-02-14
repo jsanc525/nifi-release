@@ -35,10 +35,10 @@
                 <executions>
                     <execution>
                         <id>make shared resource</id>
-                        <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
+                        <phase>generate-test-resources</phase>
                         <configuration>
                             <archiverConfig>
                                 <defaultDirectoryMode>0775</defaultDirectoryMode>
