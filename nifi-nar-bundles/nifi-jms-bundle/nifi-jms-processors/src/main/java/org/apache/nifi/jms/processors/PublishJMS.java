@@ -17,6 +17,7 @@
 package org.apache.nifi.jms.processors;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.behavior.ReadsAttribute;
@@ -26,6 +27,8 @@ import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.jms.cf.JMSConnectionFactoryProvider;
 import org.apache.nifi.processor.ProcessContext;
@@ -42,8 +45,10 @@ import javax.jms.Destination;
 import javax.jms.Message;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -77,9 +82,22 @@ import java.util.Set;
         + " `delay.type` with value `integer` will cause a JMS message property `delay` to be sent as an Integer rather than a String. Supported types are boolean, byte,"
         + " short, integer, long, float, double, and string (which is the default).")
 })
+@DynamicProperty(name = "The name of a Connection Factory configuration property.", value = "The value of a given Connection Factory configuration property.",
+        description = "Additional configuration property for the Connection Factory. It can be used when the Connection Factory is being configured via the 'JNDI *' or the 'JMS *'" +
+                "properties of the processor. For more information, see the Additional Details page.",
+        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY)
 @SeeAlso(value = { ConsumeJMS.class, JMSConnectionFactoryProvider.class })
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 public class PublishJMS extends AbstractJMSProcessor<JMSPublisher> {
+
+    static final PropertyDescriptor MESSAGE_BODY = new PropertyDescriptor.Builder()
+            .name("message-body-type")
+            .displayName("Message Body Type")
+            .description("The type of JMS message body to construct.")
+            .required(true)
+            .defaultValue(BYTES_MESSAGE)
+            .allowableValues(BYTES_MESSAGE, TEXT_MESSAGE)
+            .build();
 
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
@@ -90,6 +108,7 @@ public class PublishJMS extends AbstractJMSProcessor<JMSPublisher> {
             .description("All FlowFiles that cannot be sent to JMS destination are routed to this relationship")
             .build();
 
+    private static final List<PropertyDescriptor> propertyDescriptors;
     private final static Set<Relationship> relationships;
 
     /*
@@ -97,6 +116,25 @@ public class PublishJMS extends AbstractJMSProcessor<JMSPublisher> {
      * Will also create a Set of relationships
      */
     static {
+        List<PropertyDescriptor> _propertyDescriptors = new ArrayList<>();
+
+        _propertyDescriptors.add(CF_SERVICE);
+        _propertyDescriptors.add(DESTINATION);
+        _propertyDescriptors.add(DESTINATION_TYPE);
+        _propertyDescriptors.add(USER);
+        _propertyDescriptors.add(PASSWORD);
+        _propertyDescriptors.add(CLIENT_ID);
+        _propertyDescriptors.add(SESSION_CACHE_SIZE);
+
+        _propertyDescriptors.add(MESSAGE_BODY);
+        _propertyDescriptors.add(CHARSET);
+
+        _propertyDescriptors.addAll(JNDI_JMS_CF_PROPERTIES);
+        _propertyDescriptors.addAll(JMS_CF_PROPERTIES);
+
+        propertyDescriptors = Collections.unmodifiableList(_propertyDescriptors);
+
+
         Set<Relationship> _relationships = new HashSet<>();
         _relationships.add(REL_SUCCESS);
         _relationships.add(REL_FAILURE);
@@ -138,6 +176,11 @@ public class PublishJMS extends AbstractJMSProcessor<JMSPublisher> {
                 context.yield();
             }
         }
+    }
+
+    @Override
+    protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
+        return propertyDescriptors;
     }
 
     /**

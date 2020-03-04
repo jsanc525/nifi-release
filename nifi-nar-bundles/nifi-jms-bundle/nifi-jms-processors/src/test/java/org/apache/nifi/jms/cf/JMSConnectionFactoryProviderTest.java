@@ -16,8 +16,11 @@
  */
 package org.apache.nifi.jms.cf;
 
+import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.util.MockComponentLog;
+import org.apache.nifi.util.MockConfigurationContext;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.junit.Assert;
@@ -26,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URISyntaxException;
+import java.util.Collections;
 
 import static org.mockito.Mockito.mock;
 
@@ -41,10 +45,10 @@ public class JMSConnectionFactoryProviderTest {
         TestRunner runner = TestRunners.newTestRunner(mock(Processor.class));
         JMSConnectionFactoryProvider cfProvider = new JMSConnectionFactoryProvider();
         runner.addControllerService("cfProvider", cfProvider);
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.BROKER_URI, "myhost:1234");
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_BROKER_URI, "myhost:1234");
 
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.CLIENT_LIB_DIR_PATH, "foo");
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.CONNECTION_FACTORY_IMPL,
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CLIENT_LIBRARIES, "foo");
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CONNECTION_FACTORY_IMPL,
                 "org.apache.nifi.jms.testcflib.TestConnectionFactory");
         runner.assertNotValid(cfProvider);
     }
@@ -60,9 +64,9 @@ public class JMSConnectionFactoryProviderTest {
         runner.setVariable("broker.uri", "tcp://0.0.0.0:616161");
         runner.setVariable("client.lib", clientLib);
 
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.BROKER_URI, "${broker.uri}");
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.CLIENT_LIB_DIR_PATH, "${client.lib}");
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.CONNECTION_FACTORY_IMPL,
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_BROKER_URI, "${broker.uri}");
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CLIENT_LIBRARIES, "${client.lib}");
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CONNECTION_FACTORY_IMPL,
                 "org.apache.nifi.jms.testcflib.TestConnectionFactory");
         runner.assertValid(cfProvider);
     }
@@ -83,9 +87,9 @@ public class JMSConnectionFactoryProviderTest {
         runner.setVariable("broker.uri", "tcp://0.0.0.0:616161");
         runner.setVariable("client.lib", clientLib);
 
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.BROKER_URI, "${broker.uri}");
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.CLIENT_LIB_DIR_PATH, "${client.lib}");
-        runner.setProperty(cfProvider, JMSConnectionFactoryProvider.CONNECTION_FACTORY_IMPL,
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_BROKER_URI, "${broker.uri}");
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CLIENT_LIBRARIES, "${client.lib}");
+        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CONNECTION_FACTORY_IMPL,
                 "org.apache.nifi.jms.testcflib.TestConnectionFactory");
 
         runner.assertValid(cfProvider);
@@ -98,7 +102,14 @@ public class JMSConnectionFactoryProviderTest {
 
     @Test(expected = IllegalStateException.class)
     public void validateGetConnectionFactoryFailureIfServiceNotConfigured() throws Exception {
-        new JMSConnectionFactoryProvider().getConnectionFactory();
+        JMSConnectionFactoryProvider cfProvider = new JMSConnectionFactoryProvider() {
+            @Override
+            protected ComponentLog getLogger() {
+                return new MockComponentLog("cfProvider", this);
+            }
+        };
+        cfProvider.onEnabled(new MockConfigurationContext(Collections.emptyMap(), null));
+        cfProvider.getConnectionFactory();
     }
 
 }
