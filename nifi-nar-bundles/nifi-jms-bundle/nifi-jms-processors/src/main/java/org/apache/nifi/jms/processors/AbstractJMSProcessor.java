@@ -152,7 +152,13 @@ abstract class AbstractJMSProcessor<T extends JMSWorker> extends AbstractProcess
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
         T worker = workerPool.poll();
         if (worker == null) {
-            worker = buildTargetResource(context);
+            try {
+                worker = buildTargetResource(context);
+            } catch (Exception e) {
+                getLogger().error("Failed to initialize JMS Connection Factory", e);
+                context.yield();
+                return;
+            }
         }
 
         try {
