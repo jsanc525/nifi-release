@@ -34,7 +34,6 @@ import org.apache.nifi.controller.label.Label;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.parameter.ParameterContext;
-import org.apache.nifi.parameter.ParameterUpdate;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.registry.ComponentVariableRegistry;
 import org.apache.nifi.registry.flow.FlowRegistryClient;
@@ -1036,8 +1035,6 @@ public interface ProcessGroup extends ComponentAuthorizable, Positionable, Versi
 
     /**
      * Called to notify the Process Group whenever the Parameter Context that it is bound to has changed.
-     *
-     * @param updatedParameters a Map of parameter name to the ParameterUpdate that describes how the Parameter was updated
      */
-    void onParameterContextUpdated(Map<String, ParameterUpdate> updatedParameters);
+    void onParameterContextUpdated();
 }

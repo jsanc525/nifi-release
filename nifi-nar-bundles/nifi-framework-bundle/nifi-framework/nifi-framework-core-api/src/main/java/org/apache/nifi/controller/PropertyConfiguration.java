@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.controller;
 
-import org.apache.nifi.parameter.ParameterLookup;
+import org.apache.nifi.parameter.ParameterContext;
 import org.apache.nifi.parameter.ParameterReference;
 import org.apache.nifi.parameter.ParameterTokenList;
 import org.apache.nifi.parameter.StandardParameterTokenList;
@@ -44,7 +44,7 @@ public class PropertyConfiguration {
         return rawValue;
     }
 
-    public String getEffectiveValue(final ParameterLookup parameterLookup) {
+    public String getEffectiveValue(final ParameterContext parameterContext) {
         if (rawValue == null) {
             return null;
         }
@@ -57,12 +57,12 @@ public class PropertyConfiguration {
         // cache the Effective Value because we may have a different Parameter Context. So, we cache a Tuple of
         // the Parameter Context and the effective value for that Parameter Context.
         final ComputedEffectiveValue computedEffectiveValue = effectiveValue.get();
-        if (computedEffectiveValue != null && computedEffectiveValue.matches(parameterLookup)) {
+        if (computedEffectiveValue != null && computedEffectiveValue.matches(parameterContext)) {
             return computedEffectiveValue.getValue();
         }
 
-        final String substituted = parameterTokenList.substitute(parameterLookup);
-        final ComputedEffectiveValue updatedValue = new ComputedEffectiveValue(parameterLookup, substituted);
+        final String substituted = parameterTokenList.substitute(parameterContext);
+        final ComputedEffectiveValue updatedValue = new ComputedEffectiveValue(parameterContext, substituted);
         effectiveValue.compareAndSet(computedEffectiveValue, updatedValue);
         return substituted;
     }
@@ -96,13 +96,13 @@ public class PropertyConfiguration {
 
 
     public static class ComputedEffectiveValue {
-        private final ParameterLookup parameterLookup;
+        private final ParameterContext parameterContext;
         private final long contextVersion;
         private final String value;
 
-        public ComputedEffectiveValue(final ParameterLookup parameterLookup, final String value) {
-            this.parameterLookup = parameterLookup;
-            this.contextVersion = parameterLookup == null ? -1 : parameterLookup.getVersion();
+        public ComputedEffectiveValue(final ParameterContext parameterContext, final String value) {
+            this.parameterContext = parameterContext;
+            this.contextVersion = parameterContext == null ? -1 : parameterContext.getVersion();
             this.value = value;
         }
 
@@ -110,16 +110,16 @@ public class PropertyConfiguration {
             return value;
         }
 
-        public boolean matches(final ParameterLookup parameterLookup) {
-            if (!Objects.equals(parameterLookup, this.parameterLookup)) {
+        public boolean matches(final ParameterContext context) {
+            if (!Objects.equals(context, this.parameterContext)) {
                 return false;
             }
 
-            if (parameterLookup == null) {
+            if (context == null) {
                 return true;
             }
 
-            return parameterLookup.getVersion() == contextVersion;
+            return context.getVersion() == contextVersion;
         }
     }
 }
