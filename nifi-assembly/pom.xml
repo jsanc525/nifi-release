@@ -295,6 +295,12 @@ language governing permissions and limitations under the License. -->
             <version>1.9.0</version>
             <type>nar</type>
         </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-hadoop-dbcp-service-nar</artifactId>
+            <version>1.9.0</version>
+            <type>nar</type>
+        </dependency>
 	<dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-mongodb-client-service-api-nar</artifactId>
