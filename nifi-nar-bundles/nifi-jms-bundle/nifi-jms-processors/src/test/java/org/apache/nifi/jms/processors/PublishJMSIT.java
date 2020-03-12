@@ -16,10 +16,10 @@
  */
 package org.apache.nifi.jms.processors;
 
+import static org.apache.nifi.processor.util.StandardValidators.NON_EMPTY_VALIDATOR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -31,8 +31,10 @@ import org.apache.activemq.broker.TransportConnector;
 import org.apache.activemq.transport.tcp.TcpTransport;
 import org.apache.activemq.transport.tcp.TcpTransportFactory;
 import org.apache.activemq.wireformat.WireFormat;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyDescriptor.Builder;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.jms.cf.JMSConnectionFactoryProviderDefinition;
-import org.apache.nifi.jms.cf.JndiJmsConnectionFactoryProperties;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.exception.ProcessException;
@@ -59,6 +61,33 @@ import javax.jms.TextMessage;
 import javax.net.SocketFactory;
 
 public class PublishJMSIT {
+
+    private static final PropertyDescriptor JNDI_INITIAL_CONTEXT_FACTORY = new Builder()
+        .name("java.naming.factory.initial")
+        .displayName("JNDI Initial Context Factory Class")
+        .description("The fully qualified class name of the JNDI Initial Context Factory Class (java.naming.factory.initial).")
+        .required(true)
+        .addValidator(NON_EMPTY_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
+
+    private static final PropertyDescriptor JNDI_PROVIDER_URL = new Builder()
+        .name("java.naming.provider.url")
+        .displayName("JNDI Provider URL")
+        .description("The URL of the JNDI Provider to use (java.naming.provider.url).")
+        .required(true)
+        .addValidator(NON_EMPTY_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
+
+    private static final PropertyDescriptor JNDI_CONNECTION_FACTORY_NAME = new Builder()
+        .name("connection.factory.name")
+        .displayName("JNDI Name of the Connection Factory")
+        .description("The name of the JNDI Object to lookup for the Connection Factory.")
+        .required(true)
+        .addValidator(NON_EMPTY_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
 
     @Test(timeout = 10000)
     public void validateSuccessfulPublishAndTransferToSuccess() throws Exception {
@@ -336,9 +365,9 @@ public class PublishJMSIT {
         TestRunner runner = TestRunners.newTestRunner(PublishJMS.class);
 
         // using JNDI JMS Connection Factory configured locally on the processor
-        runner.setProperty(JndiJmsConnectionFactoryProperties.JNDI_INITIAL_CONTEXT_FACTORY, "DummyInitialContextFactoryClass");
-        runner.setProperty(JndiJmsConnectionFactoryProperties.JNDI_PROVIDER_URL, "DummyProviderUrl");
-        runner.setProperty(JndiJmsConnectionFactoryProperties.JNDI_CONNECTION_FACTORY_NAME, "DummyConnectionFactoryName");
+        runner.setProperty(JNDI_INITIAL_CONTEXT_FACTORY, "DummyInitialContextFactoryClass");
+        runner.setProperty(JNDI_PROVIDER_URL, "DummyProviderUrl");
+        runner.setProperty(JNDI_CONNECTION_FACTORY_NAME, "DummyConnectionFactoryName");
 
         runner.setProperty(ConsumeJMS.DESTINATION, "myTopic");
         runner.setProperty(ConsumeJMS.DESTINATION_TYPE, ConsumeJMS.TOPIC);

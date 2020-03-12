@@ -34,13 +34,18 @@ import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.transport.tcp.TcpTransport;
 import org.apache.activemq.transport.tcp.TcpTransportFactory;
 import org.apache.activemq.wireformat.WireFormat;
-import org.apache.nifi.jms.cf.JMSConnectionFactoryProperties;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
+import org.apache.nifi.components.Validator;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.jms.cf.JMSConnectionFactoryProvider;
 import org.apache.nifi.jms.cf.JMSConnectionFactoryProviderDefinition;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.MockProcessContext;
@@ -73,6 +78,29 @@ import javax.jms.TextMessage;
 import javax.net.SocketFactory;
 
 public class ConsumeJMSIT {
+
+    private static final String CF_IMPL = "cf";
+    private static final String BROKER = "broker";
+
+    private static final PropertyDescriptor JMS_CONNECTION_FACTORY_IMPL = new PropertyDescriptor.Builder()
+        .name(CF_IMPL)
+        .displayName("JMS Connection Factory Implementation Class")
+        .description("The fully qualified name of the JMS ConnectionFactory implementation "
+            + "class (eg. org.apache.activemq.ActiveMQConnectionFactory).")
+        .required(true)
+        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
+
+    private static final PropertyDescriptor JMS_BROKER_URI = new PropertyDescriptor.Builder()
+        .name(BROKER)
+        .displayName("JMS Broker URI")
+        .description("URI pointing to the network location of the JMS Message broker. Example for ActiveMQ: "
+            + "'tcp://myhost:61616'. Examples for IBM MQ: 'myhost(1414)' and 'myhost01(1414),myhost02(1414)'.")
+        .required(false)
+        .addValidator(new NonEmptyBrokerURIValidator())
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
 
     @Test
     public void validateSuccessfulConsumeAndTransferToSuccess() throws Exception {
@@ -430,8 +458,8 @@ public class ConsumeJMSIT {
         // using (non-JNDI) JMS Connection Factory via controller service
         JMSConnectionFactoryProvider cfProvider = new JMSConnectionFactoryProvider();
         runner.addControllerService("cfProvider", cfProvider);
-        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_CONNECTION_FACTORY_IMPL, "DummyJMSConnectionFactoryClass");
-        runner.setProperty(cfProvider, JMSConnectionFactoryProperties.JMS_BROKER_URI, "DummyBrokerUri");
+        runner.setProperty(cfProvider, JMS_CONNECTION_FACTORY_IMPL, "DummyJMSConnectionFactoryClass");
+        runner.setProperty(cfProvider, JMS_BROKER_URI, "DummyBrokerUri");
         runner.enableControllerService(cfProvider);
 
         runner.setProperty(ConsumeJMS.CF_SERVICE, "cfProvider");
@@ -480,4 +508,17 @@ public class ConsumeJMSIT {
         return c1Consumer;
     }
 
+    /**
+     * {@link Validator} that ensures that brokerURI's length > 0 after EL
+     * evaluation
+     */
+    private static class NonEmptyBrokerURIValidator implements Validator {
+        @Override
+        public ValidationResult validate(String subject, String input, ValidationContext context) {
+            if (context.isExpressionLanguageSupported(subject) && context.isExpressionLanguagePresent(input)) {
+                return new ValidationResult.Builder().subject(subject).input(input).explanation("Expression Language Present").valid(true).build();
+            }
+            return StandardValidators.NON_EMPTY_VALIDATOR.validate(subject, input, context);
+        }
+    }
 }
