@@ -68,7 +68,6 @@ public abstract class NiFiAuthenticationFilter extends GenericFilterBean {
     }
 
     private void authenticate(final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain) throws IOException, ServletException {
-        String dnChain = null;
         try {
             final Authentication authenticationRequest = attemptAuthentication(request);
             if (authenticationRequest != null) {
@@ -80,9 +79,6 @@ public abstract class NiFiAuthenticationFilter extends GenericFilterBean {
                 final Authentication authenticated = authenticationManager.authenticate(authenticationRequest);
                 successfulAuthentication(request, response, authenticated);
             }
-
-            // continue
-            chain.doFilter(request, response);
         } catch (final AuthenticationException ae) {
             // invalid authentication - always error out
             unsuccessfulAuthentication(request, response, ae);
