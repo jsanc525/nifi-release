@@ -79,7 +79,7 @@ public class TestStandardProcessorTestRunner {
         runner.assertAllFlowFilesTransferred(GoodProcessor.REL_SUCCESS, 1);
 
         runner.assertAllConditionsMet("success",
-                mff -> mff.isAttributeEqual("GROUP_ATTRIBUTE_KEY", "1") && mff.isContentEqual("1,hello\n1,good-bye")
+            mff -> mff.isAttributeEqual("GROUP_ATTRIBUTE_KEY", "1") && mff.isContentEqual("1,hello\n1,good-bye")
         );
     }
 
@@ -309,14 +309,14 @@ public class TestStandardProcessorTestRunner {
     private static class GoodProcessor extends AbstractProcessor {
 
         public static final Relationship REL_SUCCESS = new Relationship.Builder()
-                .name("success")
-                .description("Successfully created FlowFile from ...")
-                .build();
+            .name("success")
+            .description("Successfully created FlowFile from ...")
+            .build();
 
         public static final Relationship REL_FAILURE = new Relationship.Builder()
-                .name("failure")
-                .description("... execution failed. Incoming FlowFile will be penalized and routed to this relationship")
-                .build();
+            .name("failure")
+            .description("... execution failed. Incoming FlowFile will be penalized and routed to this relationship")
+            .build();
 
         private final Set<Relationship> relationships;
 
@@ -344,12 +344,12 @@ public class TestStandardProcessorTestRunner {
     private static class SimpleTestService extends AbstractControllerService {
         private final String PD_NAME = "name";
         private PropertyDescriptor namePropertyDescriptor = new PropertyDescriptor.Builder()
-                .name(PD_NAME)
-                .displayName("Controller Service Name")
-                .required(false)
-                .sensitive(false)
-                .allowableValues("exampleName", "anotherExampleName")
-                .build();
+            .name(PD_NAME)
+            .displayName("Controller Service Name")
+            .required(false)
+            .sensitive(false)
+            .allowableValues("exampleName", "anotherExampleName")
+            .build();
 
         private boolean opmCalled = false;
 
@@ -370,15 +370,34 @@ public class TestStandardProcessorTestRunner {
     private static class RequiredPropertyTestService extends AbstractControllerService {
         private static final String PD_NAME = "name";
         protected static final  PropertyDescriptor namePropertyDescriptor = new PropertyDescriptor.Builder()
-                .name(PD_NAME)
-                .displayName("Controller Service Name")
-                .required(true)
-                .sensitive(false)
-                .allowableValues("exampleName", "anotherExampleName")
-                .build();
+            .name(PD_NAME)
+            .displayName("Controller Service Name")
+            .required(true)
+            .sensitive(false)
+            .allowableValues("exampleName", "anotherExampleName")
+            .build();
 
         protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
             return Arrays.asList(namePropertyDescriptor);
         }
+    }
+
+    @Test
+    public void testErrorLogMessageArguments() {
+
+        String compName = "name of component";
+        final MockComponentLog logger = new MockComponentLog("first id",compName);
+
+        Throwable t = new ArithmeticException();
+        logger.error("expected test error",t);
+
+        String expected_throwable = "java.lang.ArithmeticException";
+
+        List<LogMessage>  log = logger.getErrorMessages();
+        LogMessage msg = log.get(0);
+        // checking if the error messages are recorded in the correct throwable argument.
+        assertEquals(expected_throwable,msg.getThrowable().toString());
+        assertEquals("{} expected test error",msg.getMsg());
+
     }
 }

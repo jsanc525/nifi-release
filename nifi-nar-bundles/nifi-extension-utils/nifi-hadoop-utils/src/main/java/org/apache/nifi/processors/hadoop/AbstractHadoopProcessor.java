@@ -205,8 +205,8 @@ public abstract class AbstractHadoopProcessor extends AbstractProcessor {
             }
 
             final Configuration conf = resources.getConfiguration();
-            results.addAll(KerberosProperties.validatePrincipalAndKeytab(
-                this.getClass().getSimpleName(), conf, resolvedPrincipal, resolvedKeytab, getLogger()));
+            results.addAll(KerberosProperties.validatePrincipalWithKeytabOrPassword(
+                this.getClass().getSimpleName(), conf, resolvedPrincipal, resolvedKeytab, null, getLogger()));
 
         } catch (final IOException e) {
             results.add(new ValidationResult.Builder()
