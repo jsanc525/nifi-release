@@ -477,6 +477,10 @@ public class WriteAheadStorePartition implements EventStorePartition {
             .forEach(file -> delete(file));
     }
 
+    private File getActiveEventFile() {
+        final RecordWriterLease lease = eventWriterLeaseRef.get();
+        return lease == null ? null : lease.getWriter().getFile();
+    }
 
     @Override
     public long purgeOldestEvents() {
@@ -485,7 +489,12 @@ public class WriteAheadStorePartition implements EventStorePartition {
             return 0L;
         }
 
+        final File currentFile = getActiveEventFile();
         for (final File eventFile : eventFiles) {
+            if (eventFile.equals(currentFile)) {
+                continue;
+            }
+
             final long fileSize = eventFile.length();
 
             if (delete(eventFile)) {
@@ -501,6 +510,12 @@ public class WriteAheadStorePartition implements EventStorePartition {
     }
 
     private boolean delete(final File file) {
+        final File activeEventFile = getActiveEventFile();
+        if (file.equals(activeEventFile)) {
+            logger.debug("Attempting to age off Active Event File {}. Will return without deleting the file.", file);
+            return false;
+        }
+
         final long firstEventId = DirectoryUtils.getMinId(file);
         synchronized (minEventIdToPathMap) {
             minEventIdToPathMap.remove(firstEventId);
