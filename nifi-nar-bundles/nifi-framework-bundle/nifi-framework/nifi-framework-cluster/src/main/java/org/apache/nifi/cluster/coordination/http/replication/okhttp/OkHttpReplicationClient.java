@@ -17,6 +17,9 @@
 
 package org.apache.nifi.cluster.coordination.http.replication.okhttp;
 
+import static org.apache.nifi.security.util.SslContextFactory.ClientAuth.WANT;
+import static org.apache.nifi.security.util.SslContextFactory.createTrustSslContextWithTrustManagers;
+
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonInclude.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,9 +74,8 @@ import org.apache.nifi.util.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StreamUtils;
+
 // Using static imports because of the name conflict:
-import static org.apache.nifi.security.util.SslContextFactory.ClientAuth.WANT;
-import static org.apache.nifi.security.util.SslContextFactory.createTrustSslContextWithTrustManagers;
 
 public class OkHttpReplicationClient implements HttpReplicationClient {
     private static final Logger logger = LoggerFactory.getLogger(OkHttpReplicationClient.class);
@@ -84,6 +86,7 @@ public class OkHttpReplicationClient implements HttpReplicationClient {
 
     private final ObjectMapper jsonCodec = new ObjectMapper();
     private final OkHttpClient okHttpClient;
+    private boolean tlsConfigured = false;
 
     public OkHttpReplicationClient(final NiFiProperties properties) {
         jsonCodec.setDefaultPropertyInclusion(Value.construct(Include.NON_NULL, Include.ALWAYS));
@@ -148,6 +151,16 @@ public class OkHttpReplicationClient implements HttpReplicationClient {
 
         final Response response = new JacksonResponse(jsonCodec, responseBytes, responseHeaders, URI.create(uri), callResponse.code(), callResponse::close);
         return response;
+    }
+
+    /**
+     * Returns {@code true} if the client has TLS enabled and configured. Even clients created without explicit
+     * keystore and truststore values have a default cipher suite list available, but no keys to use.
+     *
+     * @return true if this client can present keys
+     */
+    public boolean isTLSConfigured() {
+        return tlsConfigured;
     }
 
     private MultivaluedMap<String, String> getHeaders(final okhttp3.Response callResponse) {
@@ -319,6 +332,7 @@ public class OkHttpReplicationClient implements HttpReplicationClient {
         final Tuple<SSLSocketFactory, X509TrustManager> tuple = createSslSocketFactory(properties);
         if (tuple != null) {
             okHttpClientBuilder.sslSocketFactory(tuple.getKey(), tuple.getValue());
+            tlsConfigured = true;
         }
 
         return okHttpClientBuilder.build();
@@ -334,11 +348,11 @@ public class OkHttpReplicationClient implements HttpReplicationClient {
         try {
             Tuple<SSLContext, TrustManager[]> sslContextTuple = createTrustSslContextWithTrustManagers(
                     properties.getProperty(NiFiProperties.SECURITY_KEYSTORE),
-                    properties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD) != null ? properties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD).toCharArray() : null,
-                    properties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD) != null ? properties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD).toCharArray() : null,
+                    StringUtils.isNotBlank(properties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD)) ? properties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD).toCharArray() : null,
+                    StringUtils.isNotBlank(properties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD)) ? properties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD).toCharArray() : null,
                     properties.getProperty(NiFiProperties.SECURITY_KEYSTORE_TYPE),
                     properties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE),
-                    properties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD) != null ? properties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD).toCharArray() : null,
+                    StringUtils.isNotBlank(properties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD)) ? properties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD).toCharArray() : null,
                     properties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_TYPE),
                     WANT,
                     sslContext.getProtocol());
@@ -346,7 +360,10 @@ public class OkHttpReplicationClient implements HttpReplicationClient {
                     .filter(trustManager -> trustManager instanceof X509TrustManager)
                     .map(trustManager -> (X509TrustManager) trustManager).collect(Collectors.toList());
             return new Tuple<>(sslContextTuple.getKey().getSocketFactory(), x509TrustManagers.get(0));
-        } catch (CertificateException | UnrecoverableKeyException | NoSuchAlgorithmException | KeyStoreException | KeyManagementException | IOException e) {
+        } catch(UnrecoverableKeyException e) {
+            logger.error("Key password may be incorrect or not set. Check your keystore passwords." + e.getMessage());
+            return null;
+        } catch (CertificateException | NoSuchAlgorithmException | KeyStoreException | KeyManagementException | IOException e) {
             return null;
         }
     }
