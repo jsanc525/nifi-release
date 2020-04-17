@@ -160,7 +160,7 @@ public class ContentLengthFilterTest {
                     }
                 } catch (final Exception e) {
                     // This is the jetty context returning a 400 from the maxFormContentSize setting:
-                    if (StringUtils.containsIgnoreCase(e.getCause().toString(), "Form is larger than max length " + FORM_CONTENT_SIZE)) {
+                    if (StringUtils.containsIgnoreCase(e.getCause().toString(), "Form too large: ")) {
                         logger.warn("Exception thrown by input stream: ", e);
                         resp.sendError(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE, "Payload Too Large");
                     } else {
