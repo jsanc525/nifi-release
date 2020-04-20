@@ -79,9 +79,6 @@ public abstract class NiFiAuthenticationFilter extends GenericFilterBean {
                 final Authentication authenticated = authenticationManager.authenticate(authenticationRequest);
                 successfulAuthentication(request, response, authenticated);
             }
-
-            // continue
-            chain.doFilter(request, response);
         } catch (final AuthenticationException ae) {
             // invalid authentication - always error out
             unsuccessfulAuthentication(request, response, ae);
@@ -98,6 +95,8 @@ public abstract class NiFiAuthenticationFilter extends GenericFilterBean {
             out.println(String.format("Failed to authenticate request. Please contact the system administrator."));
             return;
         }
+        // continue
+        chain.doFilter(request, response);
     }
 
     /**
