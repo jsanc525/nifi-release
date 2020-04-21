@@ -79,7 +79,7 @@ class ProcessGroupResourceTest extends GroovyTestCase {
         // Act
 
         // Try to submit the malformed template
-        Response response = pgResource.uploadTemplate(mockRequest, mockUriInfo, groupId, false, contentInputStream)
+        Response response = pgResource.uploadTemplate(mockRequest, mockUriInfo, groupId, contentInputStream)
         logger.info("Response: ${response}")
 
         // Assert
