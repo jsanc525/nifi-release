@@ -44,6 +44,7 @@ import org.apache.nifi.serialization.record.RecordField;
 import org.apache.nifi.serialization.record.RecordSchema;
 
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -221,6 +222,8 @@ public class FlowFileTable extends AbstractTable implements QueryableTable, Tran
                 return typeFactory.createJavaType(HashMap.class);
             case BIGINT:
                 return typeFactory.createJavaType(BigInteger.class);
+            case DECIMAL:
+                return typeFactory.createJavaType(BigDecimal.class);
             case CHOICE:
                 return typeFactory.createJavaType(Object.class);
         }

@@ -588,6 +588,9 @@ public class PutElasticsearchHttpRecord extends AbstractElasticsearchHttpProcess
                     generator.writeNumber((BigInteger) coercedValue);
                 }
                 break;
+            case DECIMAL:
+                generator.writeNumber(DataTypeUtils.toBigDecimal(coercedValue, fieldName));
+                break;
             case BOOLEAN:
                 final String stringValue = coercedValue.toString();
                 if ("true".equalsIgnoreCase(stringValue)) {

@@ -26,18 +26,25 @@ import org.apache.nifi.serialization.record.RecordFieldType;
 import org.apache.nifi.serialization.record.RecordSchema;
 import org.apache.nifi.serialization.record.type.ArrayDataType;
 import org.apache.nifi.serialization.record.type.ChoiceDataType;
+import org.apache.nifi.serialization.record.type.DecimalDataType;
 import org.apache.nifi.serialization.record.type.MapDataType;
 import org.apache.nifi.serialization.record.type.RecordDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.io.Reader;
 import java.lang.reflect.Array;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -88,7 +95,14 @@ public class DataTypeUtils {
             "(" + Base10Decimal + OptionalBase10Exponent + ")" +
         ")";
 
+    private static final String decimalRegex =
+        OptionalSign +
+            "(" + Base10Digits + OptionalBase10Decimal + ")" + "|" +
+            "(" + Base10Digits + OptionalBase10Decimal + Base10Exponent + ")" + "|" +
+            "(" + Base10Decimal + OptionalBase10Exponent + ")";
+
     private static final Pattern FLOATING_POINT_PATTERN = Pattern.compile(doubleRegex);
+    private static final Pattern DECIMAL_PATTERN = Pattern.compile(decimalRegex);
 
     private static final TimeZone gmt = TimeZone.getTimeZone("gmt");
 
@@ -122,6 +136,7 @@ public class DataTypeUtils {
         NUMERIC_VALIDATORS.put(RecordFieldType.SHORT, value -> value instanceof Short);
         NUMERIC_VALIDATORS.put(RecordFieldType.DOUBLE, value -> value instanceof Double);
         NUMERIC_VALIDATORS.put(RecordFieldType.FLOAT, value -> value instanceof Float);
+        NUMERIC_VALIDATORS.put(RecordFieldType.DECIMAL, value -> value instanceof BigDecimal);
     }
 
     public static Object convertType(final Object value, final DataType dataType, final String fieldName) {
@@ -169,6 +184,8 @@ public class DataTypeUtils {
                 return toCharacter(value, fieldName);
             case DATE:
                 return toDate(value, dateFormat, fieldName);
+            case DECIMAL:
+                return toBigDecimal(value, fieldName);
             case DOUBLE:
                 return toDouble(value, fieldName);
             case FLOAT:
@@ -223,6 +240,8 @@ public class DataTypeUtils {
                 return isCharacterTypeCompatible(value);
             case DATE:
                 return isDateTypeCompatible(value, dataType.getFormat());
+            case DECIMAL:
+                return isDecimalTypeCompatible(value);
             case DOUBLE:
                 return isDoubleTypeCompatible(value);
             case FLOAT:
@@ -478,6 +497,10 @@ public class DataTypeUtils {
             if (value instanceof BigInteger) {
                 return RecordFieldType.BIGINT.getDataType();
             }
+            if (value instanceof BigDecimal) {
+                final BigDecimal bigDecimal = (BigDecimal) value;
+                return RecordFieldType.DECIMAL.getDecimalDataType(bigDecimal.precision(), bigDecimal.scale());
+            }
         }
 
         if (value instanceof Boolean) {
@@ -498,7 +521,23 @@ public class DataTypeUtils {
 
         // A value of a Map could be either a Record or a Map type. In either case, it must have Strings as keys.
         if (value instanceof Map) {
-            final Map<String, ?> map = (Map<String, ?>) value;
+            final Map<String, Object> map;
+            // Only transform the map if the keys aren't strings
+            boolean allStrings = true;
+            for (final Object key : ((Map<?, ?>) value).keySet()) {
+                if (!(key instanceof String)) {
+                    allStrings = false;
+                    break;
+                }
+            }
+
+            if (allStrings) {
+                map = (Map<String, Object>) value;
+            } else {
+                final Map<?, ?> m = (Map<?, ?>) value;
+                map = new HashMap<>(m.size());
+                m.forEach((k, v) -> map.put(k == null ? null : k.toString(), v));
+            }
             return inferRecordDataType(map);
 //            // Check if all types are the same.
 //            if (map.isEmpty()) {
@@ -656,7 +695,28 @@ public class DataTypeUtils {
             return list.toArray();
         }
 
-        throw new IllegalTypeConversionException("Cannot convert value [" + value + "] of type " + value.getClass() + " to Object Array for field " + fieldName);
+        try {
+            if (value instanceof Blob) {
+                Blob blob = (Blob) value;
+                long rawBlobLength = blob.length();
+                if(rawBlobLength > Integer.MAX_VALUE) {
+                    throw new IllegalTypeConversionException("Value of type " + value.getClass() + " too large to convert to Object Array for field " + fieldName);
+                }
+                int blobLength = (int) rawBlobLength;
+                byte[] src = blob.getBytes(1, blobLength);
+                Byte[] dest = new Byte[blobLength];
+                for (int i = 0; i < src.length; i++) {
+                    dest[i] = src[i];
+                }
+                return dest;
+            } else {
+                throw new IllegalTypeConversionException("Cannot convert value [" + value + "] of type " + value.getClass() + " to Object Array for field " + fieldName);
+            }
+        } catch (IllegalTypeConversionException itce) {
+            throw itce;
+        } catch (Exception e) {
+            throw new IllegalTypeConversionException("Cannot convert value [" + value + "] of type " + value.getClass() + " to Object Array for field " + fieldName, e);
+        }
     }
 
     public static boolean isArrayTypeCompatible(final Object value, final DataType elementDataType) {
@@ -854,6 +914,20 @@ public class DataTypeUtils {
                 return ""; // Empty array = empty string
             }
         }
+        if (value instanceof Clob) {
+            Clob clob = (Clob) value;
+            StringBuilder sb = new StringBuilder();
+            char[] buffer = new char[32 * 1024]; // 32K default buffer
+            try (Reader reader = clob.getCharacterStream()) {
+                int charsRead;
+                while ((charsRead = reader.read(buffer)) != -1) {
+                    sb.append(buffer, 0, charsRead);
+                }
+                return sb.toString();
+            } catch (Exception e) {
+                throw new IllegalTypeConversionException("Cannot convert value " + value + " of type " + value.getClass() + " to a valid String", e);
+            }
+        }
 
         return value.toString();
     }
@@ -896,6 +970,34 @@ public class DataTypeUtils {
         if (value instanceof java.util.Date) {
             return getDateFormat(format).format((java.util.Date) value);
         }
+        if (value instanceof Blob) {
+            Blob blob = (Blob) value;
+            StringBuilder sb = new StringBuilder();
+            byte[] buffer = new byte[32 * 1024]; // 32K default buffer
+            try (InputStream inStream = blob.getBinaryStream()) {
+                int bytesRead;
+                while ((bytesRead = inStream.read(buffer)) != -1) {
+                    sb.append(new String(buffer, charset), 0, bytesRead);
+                }
+                return sb.toString();
+            } catch (Exception e) {
+                throw new IllegalTypeConversionException("Cannot convert value " + value + " of type " + value.getClass() + " to a valid String", e);
+            }
+        }
+        if (value instanceof Clob) {
+            Clob clob = (Clob) value;
+            StringBuilder sb = new StringBuilder();
+            char[] buffer = new char[32 * 1024]; // 32K default buffer
+            try (Reader reader = clob.getCharacterStream()) {
+                int charsRead;
+                while ((charsRead = reader.read(buffer)) != -1) {
+                    sb.append(buffer, 0, charsRead);
+                }
+                return sb.toString();
+            } catch (Exception e) {
+                throw new IllegalTypeConversionException("Cannot convert value " + value + " of type " + value.getClass() + " to a valid String", e);
+            }
+        }
 
         if (value instanceof Object[]) {
             return Arrays.toString((Object[]) value);
@@ -917,13 +1019,13 @@ public class DataTypeUtils {
             return null;
         }
 
+        if (value instanceof Date) {
+            return (Date) value;
+        }
+
         if (value instanceof java.util.Date) {
             java.util.Date _temp = (java.util.Date)value;
             return new Date(_temp.getTime());
-        }
-
-        if (value instanceof Date) {
-            return (Date) value;
         }
 
         if (value instanceof Number) {
@@ -1045,6 +1147,15 @@ public class DataTypeUtils {
         return df;
     }
 
+    public static DateFormat getDateFormat(final String format, final String timezoneID) {
+        if (format == null || timezoneID == null) {
+            return null;
+        }
+        final DateFormat df = new SimpleDateFormat(format);
+        df.setTimeZone(TimeZone.getTimeZone(timezoneID));
+        return df;
+    }
+
     public static boolean isTimeTypeCompatible(final Object value, final String format) {
         return isDateTypeCompatible(value, format);
     }
@@ -1054,12 +1165,12 @@ public class DataTypeUtils {
             return null;
         }
 
-        if (value instanceof java.util.Date) {
-            return new Timestamp(((java.util.Date)value).getTime());
-        }
-
         if (value instanceof Timestamp) {
             return (Timestamp) value;
+        }
+
+        if (value instanceof java.util.Date) {
+            return new Timestamp(((java.util.Date)value).getTime());
         }
 
         if (value instanceof Number) {
@@ -1068,12 +1179,12 @@ public class DataTypeUtils {
         }
 
         if (value instanceof String) {
-            try {
-                final String string = ((String) value).trim();
-                if (string.isEmpty()) {
-                    return null;
-                }
+            final String string = ((String) value).trim();
+            if (string.isEmpty()) {
+                return null;
+            }
 
+            try {
                 if (format == null) {
                     return new Timestamp(Long.parseLong(string));
                 }
@@ -1082,11 +1193,23 @@ public class DataTypeUtils {
                 if (dateFormat == null) {
                     return new Timestamp(Long.parseLong(string));
                 }
+
                 final java.util.Date utilDate = dateFormat.parse(string);
                 return new Timestamp(utilDate.getTime());
             } catch (final ParseException e) {
+                final DateFormat dateFormat = format.get();
+                final String formatDescription;
+                if (dateFormat == null) {
+                    formatDescription = "Numeric";
+                } else if (dateFormat instanceof SimpleDateFormat) {
+                    formatDescription = ((SimpleDateFormat) dateFormat).toPattern();
+                } else {
+                    formatDescription = dateFormat.toString();
+                }
+
                 throw new IllegalTypeConversionException("Could not convert value [" + value
-                    + "] of type java.lang.String to Timestamp for field " + fieldName + " because the value is not in the expected date format: " + format);
+                    + "] of type java.lang.String to Timestamp for field " + fieldName + " because the value is not in the expected date format: "
+                    + formatDescription);
             }
         }
 
@@ -1127,6 +1250,10 @@ public class DataTypeUtils {
         return isNumberTypeCompatible(value, DataTypeUtils::isIntegral);
     }
 
+    public static boolean isDecimalTypeCompatible(final Object value) {
+        return isNumberTypeCompatible(value, DataTypeUtils::isDecimal);
+    }
+
     public static Boolean toBoolean(final Object value, final String fieldName) {
         if (value == null) {
             return null;
@@ -1159,6 +1286,50 @@ public class DataTypeUtils {
             return string.equalsIgnoreCase("true") || string.equalsIgnoreCase("false");
         }
         return false;
+    }
+
+    public static BigDecimal toBigDecimal(final Object value, final String fieldName) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+
+        if (value instanceof Number) {
+            final Number number = (Number) value;
+
+            if (number instanceof Byte
+                    || number instanceof Short
+                    || number instanceof Integer
+                    || number instanceof Long) {
+                return BigDecimal.valueOf(number.longValue());
+            }
+
+            if (number instanceof BigInteger) {
+                return new BigDecimal((BigInteger) number);
+            }
+
+            if (number instanceof Float) {
+                return new BigDecimal(Float.toString((Float) number));
+            }
+
+            if (number instanceof Double) {
+                return new BigDecimal(Double.toString((Double) number));
+            }
+        }
+
+        if (value instanceof String) {
+            try {
+                return new BigDecimal((String) value);
+            } catch (NumberFormatException nfe) {
+                throw new IllegalTypeConversionException("Cannot convert value [" + value + "] of type " + value.getClass() + " to BigDecimal for field " + fieldName
+                        + ", value is not a valid representation of BigDecimal", nfe);
+            }
+        }
+
+        throw new IllegalTypeConversionException("Cannot convert value [" + value + "] of type " + value.getClass() + " to BigDecimal for field " + fieldName);
     }
 
     public static Double toDouble(final Object value, final String fieldName) {
@@ -1215,6 +1386,14 @@ public class DataTypeUtils {
 
     public static boolean isFloatTypeCompatible(final Object value) {
         return isNumberTypeCompatible(value, s -> isFloatingPoint(s));
+    }
+
+    private static boolean isDecimal(final String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+
+        return DECIMAL_PATTERN.matcher(value).matches();
     }
 
     private static boolean isFloatingPoint(final String value) {
@@ -1586,15 +1765,31 @@ public class DataTypeUtils {
             case FLOAT:
                 if (otherFieldType == RecordFieldType.DOUBLE) {
                     return Optional.of(otherDataType);
+                } else if (otherFieldType == RecordFieldType.DECIMAL) {
+                    return Optional.of(otherDataType);
                 }
                 break;
             case DOUBLE:
                 if (otherFieldType == RecordFieldType.FLOAT) {
                     return Optional.of(thisDataType);
+                } else if (otherFieldType == RecordFieldType.DECIMAL) {
+                    return Optional.of(otherDataType);
                 }
                 break;
+            case DECIMAL:
+                if (otherFieldType == RecordFieldType.DOUBLE) {
+                    return Optional.of(thisDataType);
+                } else if (otherFieldType == RecordFieldType.FLOAT) {
+                    return Optional.of(thisDataType);
+                } else if (otherFieldType == RecordFieldType.DECIMAL) {
+                    final DecimalDataType thisDecimalDataType = (DecimalDataType) thisDataType;
+                    final DecimalDataType otherDecimalDataType = (DecimalDataType) otherDataType;
 
-
+                    final int precision = Math.max(thisDecimalDataType.getPrecision(), otherDecimalDataType.getPrecision());
+                    final int scale = Math.max(thisDecimalDataType.getScale(), otherDecimalDataType.getScale());
+                    return Optional.of(RecordFieldType.DECIMAL.getDecimalDataType(precision, scale));
+                }
+                break;
             case CHAR:
                 if (otherFieldType == RecordFieldType.STRING) {
                     return Optional.of(otherDataType);
