@@ -111,18 +111,14 @@ public class TestWriteCSVResult {
         assertEquals(2, splits.length);
         assertEquals(headerLine, splits[0]);
 
-        final String values = splits[1];
-        final StringBuilder expectedBuilder = new StringBuilder();
-        expectedBuilder.append("\"a孟bc李12儒3\",\"true\",\"1\",\"c\",\"8\",\"9\",\"8\",\"8\",\"8.0\",\"8.0\",");
-
         final String dateValue = getDateFormat(RecordFieldType.DATE.getDefaultFormat()).format(now);
         final String timeValue = getDateFormat(RecordFieldType.TIME.getDefaultFormat()).format(now);
         final String timestampValue = getDateFormat(RecordFieldType.TIMESTAMP.getDefaultFormat()).format(now);
 
-        expectedBuilder.append('"').append(dateValue).append('"').append(',');
-        expectedBuilder.append('"').append(timeValue).append('"').append(',');
-        expectedBuilder.append('"').append(timestampValue).append('"').append(',');
-        expectedBuilder.append(",\"48\",,");
+        final String values = splits[1];
+        final StringBuilder expectedBuilder = new StringBuilder();
+        expectedBuilder.append("\"true\",\"1\",\"8\",\"9\",\"8\",\"8\",\"8.0\",\"8.0\",\"" + timestampValue + "\",\"" + dateValue + "\",\"" + timeValue + "\",\"c\",\"a孟bc李12儒3\",,\"48\",,");
+
         final String expectedValues = expectedBuilder.toString();
 
         assertEquals(expectedValues, values);
