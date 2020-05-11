@@ -107,7 +107,7 @@ public class StandardFlowSerializerTest {
         dummy.setComments(RAW_COMMENTS);
         controller.getRootGroup().addProcessor(dummy);
 
-        controller.getFlowManager().getRootGroup().setVariables(Collections.singletonMap(RAW_VARIABLE_NAME, RAW_VARIABLE_VALUE));
+        controller.getRootGroup().setVariables(Collections.singletonMap(RAW_VARIABLE_NAME, RAW_VARIABLE_VALUE));
 
         // serialize the controller
         final ByteArrayOutputStream os = new ByteArrayOutputStream();
