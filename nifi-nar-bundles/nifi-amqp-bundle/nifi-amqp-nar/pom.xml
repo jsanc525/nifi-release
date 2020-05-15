@@ -18,10 +18,10 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-amqp-bundle</artifactId>
-        <version>1.5.0</version>
+        <version>1.5.0.3.1.2.32-4</version>
     </parent>
     <artifactId>nifi-amqp-nar</artifactId>
-    <version>1.5.0</version>
+    <version>1.5.0.3.1.2.32-4</version>
     <packaging>nar</packaging>
     <properties>
         <maven.javadoc.skip>true</maven.javadoc.skip>
