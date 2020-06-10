@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.when;
 
 public class FetchParquetTest {
@@ -237,8 +238,12 @@ public class FetchParquetTest {
 
         final RecordSetWriterFactory recordSetWriterFactory = Mockito.mock(RecordSetWriterFactory.class);
         when(recordSetWriterFactory.getIdentifier()).thenReturn("mock-writer-factory");
-        when(recordSetWriterFactory.createWriter(any(ComponentLog.class), AdditionalMatchers.or(any(RecordSchema.class), isNull()), any(OutputStream.class), any(FlowFile.class)))
-                .thenReturn(recordSetWriter);
+        when(
+            recordSetWriterFactory.createWriter(
+                any(ComponentLog.class),
+                any(RecordSchema.class),
+                any(OutputStream.class))
+        ).thenReturn(recordSetWriter);
 
         testRunner.addControllerService("mock-writer-factory", recordSetWriterFactory);
         testRunner.enableControllerService(recordSetWriterFactory);

@@ -70,6 +70,12 @@ public class TestWriteAvroResultWithoutSchema extends TestWriteAvroResult {
     }
 
     @Override
+    protected List<GenericRecord> readRecords(InputStream in, Schema schema, int recordCount)
+        throws IOException {
+        return null;
+    }
+
+    @Override
     protected void verify(final WriteResult writeResult) {
         final Map<String, String> attributes = writeResult.getAttributes();
 

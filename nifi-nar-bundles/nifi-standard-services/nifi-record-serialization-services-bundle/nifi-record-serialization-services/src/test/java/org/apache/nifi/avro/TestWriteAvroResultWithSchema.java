@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import java.util.List;
 import org.apache.avro.Schema;
 import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileStream;
@@ -45,5 +46,11 @@ public class TestWriteAvroResultWithSchema extends TestWriteAvroResult {
         final GenericRecord avroRecord = dataFileStream.next();
 
         return avroRecord;
+    }
+
+    @Override
+    protected List<GenericRecord> readRecords(InputStream in, Schema schema, int recordCount)
+        throws IOException {
+        return null;
     }
 }

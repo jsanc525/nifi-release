@@ -352,11 +352,6 @@ public class TestDataTypeUtils {
     }
 
     @Test
-    public void testGetSQLTypeValueWithBigDecimal() {
-        assertEquals(Types.NUMERIC, DataTypeUtils.getSQLTypeValue(RecordFieldType.DECIMAL.getDecimalDataType(30, 10)));
-    }
-
-    @Test
     public void testChooseDataTypeWhenExpectedIsBigDecimal() {
         // GIVEN
         final List<DataType> dataTypes = Arrays.asList(
