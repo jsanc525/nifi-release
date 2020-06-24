@@ -15,7 +15,7 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-nar-bundles</artifactId>
-        <version>1.11.4</version>
+        <version>1.11.4.3.5.1.3-3</version>
     </parent>
 
     <properties>
@@ -23,7 +23,7 @@
     </properties>
 
     <artifactId>nifi-accumulo-bundle</artifactId>
-    <version>1.11.4</version>
+    <version>1.11.4.3.5.1.3-3</version>
     <packaging>pom</packaging>
 
     <modules>
