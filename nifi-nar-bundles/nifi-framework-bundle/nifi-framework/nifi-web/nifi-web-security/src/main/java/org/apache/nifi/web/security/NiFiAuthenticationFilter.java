@@ -80,9 +80,6 @@ public abstract class NiFiAuthenticationFilter extends GenericFilterBean {
                 final Authentication authenticated = authenticationManager.authenticate(authenticationRequest);
                 successfulAuthentication(request, response, authenticated);
             }
-
-            // continue
-            chain.doFilter(request, response);
         } catch (final AuthenticationException ae) {
             // invalid authentication - always error out
             unsuccessfulAuthentication(request, response, ae);
