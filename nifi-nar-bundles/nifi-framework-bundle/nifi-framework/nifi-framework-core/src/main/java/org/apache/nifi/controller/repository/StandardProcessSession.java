@@ -319,7 +319,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
                     if (claim != null) {
                         context.getContentRepository().incrementClaimaintCount(claim);
                     }
-                    newRecord.setWorking(clone, Collections.<String, String> emptyMap());
+                    newRecord.setWorking(clone, Collections.<String, String> emptyMap(), false);
 
                     newRecord.setDestination(destination.getFlowFileQueue());
                     newRecord.setTransferRelationship(record.getTransferRelationship());
@@ -1673,7 +1673,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .addAttributes(attrs)
             .build();
         final StandardRepositoryRecord record = new StandardRepositoryRecord(null);
-        record.setWorking(fFile, attrs);
+        record.setWorking(fFile, attrs, false);
         records.put(fFile.getId(), record);
         createdFlowFiles.add(fFile.getAttribute(CoreAttributes.UUID.key()));
         return fFile;
@@ -1711,7 +1711,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             context.getContentRepository().incrementClaimaintCount(claim);
         }
         final StandardRepositoryRecord record = new StandardRepositoryRecord(null);
-        record.setWorking(clone, clone.getAttributes());
+        record.setWorking(clone, clone.getAttributes(), false);
         records.put(clone.getId(), record);
 
         if (offset == 0L && size == example.getSize()) {
@@ -1765,7 +1765,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
         final StandardRepositoryRecord record = getRecord(flowFile);
         final long expirationEpochMillis = System.currentTimeMillis() + context.getConnectable().getPenalizationPeriod(TimeUnit.MILLISECONDS);
         final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent()).penaltyExpirationTime(expirationEpochMillis).build();
-        record.setWorking(newFile);
+        record.setWorking(newFile, false);
         return newFile;
     }
 
@@ -1780,7 +1780,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
 
         final StandardRepositoryRecord record = getRecord(flowFile);
         final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent()).addAttribute(key, value).build();
-        record.setWorking(newFile, key, value);
+        record.setWorking(newFile, key, value, false);
 
         return newFile;
     }
@@ -1803,7 +1803,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
         final StandardFlowFileRecord.Builder ffBuilder = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent()).addAttributes(updatedAttributes);
         final FlowFileRecord newFile = ffBuilder.build();
 
-        record.setWorking(newFile, updatedAttributes);
+        record.setWorking(newFile, updatedAttributes, false);
 
         return newFile;
     }
@@ -1819,7 +1819,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
 
         final StandardRepositoryRecord record = getRecord(flowFile);
         final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent()).removeAttributes(key).build();
-        record.setWorking(newFile, key, null);
+        record.setWorking(newFile, key, null, false);
         return newFile;
     }
 
@@ -1844,7 +1844,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             updatedAttrs.put(key, null);
         }
 
-        record.setWorking(newFile, updatedAttrs);
+        record.setWorking(newFile, updatedAttrs, false);
         return newFile;
     }
 
@@ -1857,7 +1857,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
         final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent()).removeAttributes(keyPattern).build();
 
         if (keyPattern == null) {
-            record.setWorking(newFile);
+            record.setWorking(newFile, false);
         } else {
             final Map<String, String> curAttrs = record.getCurrent().getAttributes();
 
@@ -1872,7 +1872,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
                 }
             }
 
-            record.setWorking(newFile, removed);
+            record.setWorking(newFile, removed, false);
         }
 
         return newFile;
@@ -1881,7 +1881,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
     private void updateLastQueuedDate(final StandardRepositoryRecord record, final Long lastQueueDate) {
         final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent())
                 .lastQueued(lastQueueDate, enqueuedIndex.getAndIncrement()).build();
-        record.setWorking(newFile);
+        record.setWorking(newFile, false);
     }
 
     private void updateLastQueuedDate(final StandardRepositoryRecord record) {
@@ -2470,8 +2470,13 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
         }
 
         removeTemporaryClaim(destinationRecord);
-        final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(destinationRecord.getCurrent()).contentClaim(newClaim).contentClaimOffset(0L).size(writtenCount).build();
-        destinationRecord.setWorking(newFile);
+        final FlowFileRecord newFile = new StandardFlowFileRecord.Builder()
+            .fromFlowFile(destinationRecord.getCurrent())
+            .contentClaim(newClaim)
+            .contentClaimOffset(0L)
+            .size(writtenCount)
+            .build();
+        destinationRecord.setWorking(newFile, true);
         return newFile;
     }
 
@@ -2585,7 +2590,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
                         .size(bytesWritten)
                         .build();
 
-                    record.setWorking(newFile);
+                    record.setWorking(newFile, true);
                 }
             };
 
@@ -2665,7 +2670,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .size(writtenToFlowFile)
             .build();
 
-        record.setWorking(newFile);
+        record.setWorking(newFile, true);
         return newFile;
     }
 
@@ -2776,8 +2781,13 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             removeTemporaryClaim(record);
         }
 
-        final FlowFileRecord newFile = new StandardFlowFileRecord.Builder().fromFlowFile(record.getCurrent()).contentClaim(newClaim).contentClaimOffset(0).size(newSize).build();
-        record.setWorking(newFile);
+        final FlowFileRecord newFile = new StandardFlowFileRecord.Builder()
+            .fromFlowFile(record.getCurrent())
+            .contentClaim(newClaim)
+            .contentClaimOffset(0)
+            .size(newSize)
+            .build();
+        record.setWorking(newFile, true);
         return newFile;
     }
 
@@ -2793,10 +2803,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
      * @param record record
      */
     private void removeTemporaryClaim(final StandardRepositoryRecord record) {
-        final boolean contentModified = record.getWorkingClaim() != null && record.getWorkingClaim() != record.getOriginalClaim();
-
-        // If the working claim is not the same as the original claim, we have modified the content of
-        // the FlowFile, and we need to remove the newly created content (the working claim). However, if
+        // If the content of the FlowFile has already been modified, we need to remove the newly created content (the working claim). However, if
         // they are the same, we cannot just remove the claim because record.getWorkingClaim() will return
         // the original claim if the record is "working" but the content has not been modified
         // (e.g., in the case of attributes only were updated)
@@ -2807,7 +2814,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
         // that may decrement the original claim (because the 2 claims are the same), and that's NOT what we want to do
         // because we will do that later, in the session.commit() and that would result in decrementing the count for
         // the original claim twice.
-        if (contentModified) {
+        if (record.isContentModified()) {
             // In this case, it's ok to decrement the claimant count for the content because we know that the working claim is going to be
             // updated and the given working claim is referenced only by FlowFiles in this session (because it's the Working Claim).
             // Therefore, we need to decrement the claimant count, and since the Working Claim is being changed, that means that
@@ -2929,7 +2936,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .size(writtenToFlowFile)
             .build();
 
-        record.setWorking(newFile);
+        record.setWorking(newFile, true);
 
         return newFile;
     }
@@ -2977,7 +2984,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .size(newSize)
             .addAttribute(CoreAttributes.FILENAME.key(), source.toFile().getName())
             .build();
-        record.setWorking(newFile, CoreAttributes.FILENAME.key(), source.toFile().getName());
+        record.setWorking(newFile, CoreAttributes.FILENAME.key(), source.toFile().getName(), true);
 
         if (!keepSourceFile) {
             deleteOnCommit.put(newFile, source);
@@ -3021,7 +3028,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .contentClaimOffset(claimOffset)
             .size(newSize)
             .build();
-        record.setWorking(newFile);
+        record.setWorking(newFile, true);
         return newFile;
     }
 
@@ -3210,7 +3217,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
 
         final FlowFileRecord fFile = fFileBuilder.build();
         final StandardRepositoryRecord record = new StandardRepositoryRecord(null);
-        record.setWorking(fFile, newAttributes);
+        record.setWorking(fFile, newAttributes, false);
         records.put(fFile.getId(), record);
         createdFlowFiles.add(fFile.getAttribute(CoreAttributes.UUID.key()));
 
@@ -3259,7 +3266,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .build();
 
         final StandardRepositoryRecord record = new StandardRepositoryRecord(null);
-        record.setWorking(fFile, newAttributes);
+        record.setWorking(fFile, newAttributes, false);
         records.put(fFile.getId(), record);
         createdFlowFiles.add(fFile.getAttribute(CoreAttributes.UUID.key()));
 
