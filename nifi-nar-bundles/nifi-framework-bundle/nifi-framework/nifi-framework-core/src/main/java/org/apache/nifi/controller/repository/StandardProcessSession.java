@@ -3217,7 +3217,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
 
         final FlowFileRecord fFile = fFileBuilder.build();
         final StandardRepositoryRecord record = new StandardRepositoryRecord(null);
-        record.setWorking(fFile, newAttributes);
+        record.setWorking(fFile, newAttributes, false);
         records.put(fFile.getId(), record);
         createdFlowFiles.add(fFile.getAttribute(CoreAttributes.UUID.key()));
 
@@ -3266,7 +3266,7 @@ public final class StandardProcessSession implements ProcessSession, ProvenanceE
             .build();
 
         final StandardRepositoryRecord record = new StandardRepositoryRecord(null);
-        record.setWorking(fFile, newAttributes);
+        record.setWorking(fFile, newAttributes, false);
         records.put(fFile.getId(), record);
         createdFlowFiles.add(fFile.getAttribute(CoreAttributes.UUID.key()));
 
