@@ -609,6 +609,9 @@
                                     <failWhenParentIsSnapshot>false</failWhenParentIsSnapshot>
                                     <excludes>
                                         <exclude>org.apache.nifi:*</exclude>
+                                        <!-- hive-shims-0.20 dependency pulls in snapshot versions from HDP libs -->
+                                        <exclude>org.apache.hadoop:*</exclude>
+                                        <exclude>org.apache.zookeeper:*</exclude>
                                     </excludes>
                                 </requireReleaseDeps>
                             </rules>
