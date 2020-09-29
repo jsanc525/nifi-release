@@ -195,6 +195,24 @@ language governing permissions and limitations under the License. -->
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-kafka-0-8-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-kafka-0-9-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-kafka-0-10-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-kafka-0-11-nar</artifactId>
             <version>1.12.1</version>
             <type>nar</type>
@@ -249,6 +267,12 @@ language governing permissions and limitations under the License. -->
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-kite-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-kudu-nar</artifactId>
             <version>1.12.1</version>
             <type>nar</type>
@@ -256,6 +280,12 @@ language governing permissions and limitations under the License. -->
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-ldap-iaa-providers-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-flume-nar</artifactId>
             <version>1.12.1</version>
             <type>nar</type>
         </dependency>
@@ -388,6 +418,12 @@ language governing permissions and limitations under the License. -->
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-couchbase-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-media-nar</artifactId>
             <version>1.12.1</version>
             <type>nar</type>
         </dependency>
@@ -711,6 +747,18 @@ language governing permissions and limitations under the License. -->
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-druid-controller-service-api-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-druid-nar</artifactId>
+            <version>1.12.1</version>
+            <type>nar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-kerberos-credentials-service-nar</artifactId>
             <version>1.12.1</version>
             <type>nar</type>
@@ -819,6 +867,12 @@ language governing permissions and limitations under the License. -->
                 <dependency>
                     <groupId>org.apache.nifi</groupId>
                     <artifactId>nifi-neo4j-cypher-service-nar</artifactId>
+                    <version>1.12.1</version>
+                    <type>nar</type>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.nifi</groupId>
+                    <artifactId>nifi-other-graph-services-nar</artifactId>
                     <version>1.12.1</version>
                     <type>nar</type>
                 </dependency>
