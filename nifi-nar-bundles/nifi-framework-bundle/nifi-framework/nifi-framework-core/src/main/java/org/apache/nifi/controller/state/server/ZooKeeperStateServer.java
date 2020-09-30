@@ -84,9 +84,9 @@ public class ZooKeeperStateServer extends ZooKeeperServerMain {
         try {
             for (int i=0; i < 10; i++) {
                 try {
-                    transactionLog = new FileTxnSnapLog(config.getDataLogDir(), config.getDataDir());
+                    transactionLog = new FileTxnSnapLog(new File(config.getDataLogDir()), new File(config.getDataDir()));
                     break;
-                } catch (final FileTxnSnapLog.DatadirException dde) {
+                } catch (final IOException ioe) { // Backport comment: Zookeeper 3.4.6 dependencies does not have DatadirException, only IOException.
                     // The constructor for FileTxnSnapLog sometimes throws a DatadirException indicating that it is unable to create data directory,
                     // but the data directory already exists. It appears to be a race condition with another ZooKeeper thread. Even if we create the
                     // directory before entering the constructor, we sometimes see the issue occur. So we just give it up to 10 tries
@@ -121,13 +121,15 @@ public class ZooKeeperStateServer extends ZooKeeperServerMain {
         logger.info("Starting Embedded ZooKeeper Peer");
 
         try {
-            transactionLog = new FileTxnSnapLog(quorumPeerConfig.getDataLogDir(), quorumPeerConfig.getDataDir());
+            transactionLog = new FileTxnSnapLog(new File(quorumPeerConfig.getDataLogDir()), new File(quorumPeerConfig.getDataDir()));
 
             connectionFactory = ServerCnxnFactory.createFactory();
             connectionFactory.configure(quorumPeerConfig.getClientPortAddress(), quorumPeerConfig.getMaxClientCnxns());
 
             quorumPeer = new QuorumPeer();
-            quorumPeer.setTxnFactory(new FileTxnSnapLog(quorumPeerConfig.getDataLogDir(), quorumPeerConfig.getDataDir()));
+            quorumPeer.setClientPortAddress(quorumPeerConfig.getClientPortAddress());
+            quorumPeer.setTxnFactory(new FileTxnSnapLog(new File(quorumPeerConfig.getDataLogDir()), new File(quorumPeerConfig.getDataDir())));
+            quorumPeer.setQuorumPeers(quorumPeerConfig.getServers());
             quorumPeer.setElectionType(quorumPeerConfig.getElectionAlg());
             quorumPeer.setMyid(quorumPeerConfig.getServerId());
             quorumPeer.setTickTime(quorumPeerConfig.getTickTime());
@@ -135,7 +137,7 @@ public class ZooKeeperStateServer extends ZooKeeperServerMain {
             quorumPeer.setMaxSessionTimeout(quorumPeerConfig.getMaxSessionTimeout());
             quorumPeer.setInitLimit(quorumPeerConfig.getInitLimit());
             quorumPeer.setSyncLimit(quorumPeerConfig.getSyncLimit());
-            quorumPeer.setQuorumVerifier(quorumPeerConfig.getQuorumVerifier(), false);
+            quorumPeer.setQuorumVerifier(quorumPeerConfig.getQuorumVerifier());
             quorumPeer.setCnxnFactory(connectionFactory);
             quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
             quorumPeer.setLearnerType(quorumPeerConfig.getPeerType());
