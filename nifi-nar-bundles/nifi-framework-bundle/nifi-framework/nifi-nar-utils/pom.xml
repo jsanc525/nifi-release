@@ -37,10 +37,6 @@
 
         <!-- Compile-only dependency. At runtime, the agent will use aspectjweaver.jar directly, not from the classpath (see bootstrap.conf).-->
         <dependency>
-            <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-server-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
             <scope>provided</scope>
