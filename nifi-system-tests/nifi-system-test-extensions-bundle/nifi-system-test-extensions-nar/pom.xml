@@ -19,23 +19,23 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-system-test-extensions-bundle</artifactId>
-        <version>1.12.1</version>
+        <version>1.12.1.3.5.2.0-94</version>
     </parent>
 
     <artifactId>nifi-system-test-extensions-nar</artifactId>
-    <version>1.12.1</version>
+    <version>1.12.1.3.5.2.0-94</version>
     <packaging>nar</packaging>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-system-test-extensions</artifactId>
-            <version>1.12.1</version>
+            <version>1.12.1.3.5.2.0-94</version>
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-standard-services-api-nar</artifactId>
-            <version>1.12.1</version>
+            <version>1.12.1.3.5.2.0-94</version>
             <type>nar</type>
         </dependency>
     </dependencies>
