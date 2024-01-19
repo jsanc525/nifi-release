@@ -50,7 +50,7 @@
         <hive.version>1.2.1000.2.6.5.0-SNAPSHOT</hive.version>
         <hive.hadoop.version>2.7.3.2.6.5.0-292</hive.hadoop.version>
         <hive3.version>3.1.0-SNAPSHOT</hive3.version>
-        <hive3.hadoop.version>3.1.0.3.0.0.0-1634</hive3.hadoop.version>
+        <hive3.hadoop.version>3.1.1-SNAPSHOT</hive3.hadoop.version>
     </properties>
 
     <build>
